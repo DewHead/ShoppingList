@@ -8,12 +8,14 @@ async function initDb() {
     driver: sqlite3.Database
   });
 
-  // Check for FTS migration (trigram -> unicode61 or missing tokenchars)
-  const ftsTable = await db.get("SELECT sql FROM sqlite_master WHERE name='items_fts'");
-  if (ftsTable && ftsTable.sql && (ftsTable.sql.includes('trigram') || !ftsTable.sql.includes("tokenchars"))) {
-    console.log('Migrating items_fts (tokenizer update)...');
-    await db.exec('DROP TABLE items_fts');
-  }
+  // Auto-fix: Drop table if it uses the wrong tokenizer (trigram)
+  try {
+      const ftsDef = await db.get("SELECT sql FROM sqlite_master WHERE name = 'items_fts'");
+      if (ftsDef && ftsDef.sql.includes('trigram')) {
+          console.log('Detected old trigram tokenizer. Rebuilding FTS table...');
+          await db.exec('DROP TABLE items_fts');
+      }
+  } catch (e) { console.log('Table check skipped'); }
 
   await db.exec(`
     CREATE TABLE IF NOT EXISTS supermarkets (
@@ -21,7 +23,8 @@ async function initDb() {
       name TEXT NOT NULL,
       url TEXT NOT NULL,
       is_active BOOLEAN DEFAULT 1,
-      last_scrape_time DATETIME
+      last_scrape_time DATETIME,
+      branch_remote_id TEXT
     );
 
     CREATE TABLE IF NOT EXISTS items (
@@ -71,7 +74,7 @@ async function initDb() {
       supermarket_id UNINDEXED, 
       price UNINDEXED, 
       branch_info UNINDEXED,
-      tokenize='unicode61 tokenchars '''''
+      tokenize='unicode61'
     );
 
     CREATE TABLE IF NOT EXISTS item_matches (
@@ -82,53 +85,24 @@ async function initDb() {
     );
   `);
 
-  // Migration: Add branch_info to supermarket_items if not present
+  // Migrations
   try {
     const tableInfo = await db.all("PRAGMA table_info(supermarket_items)");
-    const hasBranchInfo = tableInfo.some(col => col.name === 'branch_info');
-    if (!hasBranchInfo) {
-      console.log('Migrating database: Adding branch_info to supermarket_items');
+    if (!tableInfo.some(col => col.name === 'branch_info')) {
       await db.exec('ALTER TABLE supermarket_items ADD COLUMN branch_info TEXT');
     }
-
-    const newCols = [
-      { name: 'unit_of_measure', type: 'TEXT' },
-      { name: 'unit_of_measure_price', type: 'REAL' },
-      { name: 'manufacturer', type: 'TEXT' },
-      { name: 'country', type: 'TEXT' }
-    ];
-
+    const newCols = ['unit_of_measure', 'unit_of_measure_price', 'manufacturer', 'country'];
     for (const col of newCols) {
-      if (!tableInfo.some(c => c.name === col.name)) {
-        console.log(`Migrating database: Adding ${col.name} to supermarket_items`);
-        await db.exec(`ALTER TABLE supermarket_items ADD COLUMN ${col.name} ${col.type}`);
-      }
+        if (!tableInfo.some(c => c.name === col)) {
+            await db.exec(`ALTER TABLE supermarket_items ADD COLUMN ${col} TEXT`); 
+        }
     }
-
-    const supermarketTableInfo = await db.all("PRAGMA table_info(supermarkets)");
-    const hasLastScrapeTime = supermarketTableInfo.some(col => col.name === 'last_scrape_time');
-    if (!hasLastScrapeTime) {
-      console.log('Migrating database: Adding last_scrape_time to supermarkets');
-      await db.exec('ALTER TABLE supermarkets ADD COLUMN last_scrape_time DATETIME');
+    
+    const smInfo = await db.all("PRAGMA table_info(supermarkets)");
+    if (!smInfo.some(c => c.name === 'branch_remote_id')) {
+        await db.exec('ALTER TABLE supermarkets ADD COLUMN branch_remote_id TEXT');
     }
-
-    // Add indexes for performance
-    await db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_si_supermarket_id ON supermarket_items(supermarket_id);
-      CREATE INDEX IF NOT EXISTS idx_si_remote_id ON supermarket_items(remote_id);
-      CREATE INDEX IF NOT EXISTS idx_si_branch ON supermarket_items(branch_info);
-      CREATE INDEX IF NOT EXISTS idx_sp_lookup ON supermarket_promos(supermarket_id, remote_id, branch_info);
-    `);
-
-    // Update Rami Levy URL if it exists with old URL
-    await db.run(`
-      UPDATE supermarkets 
-      SET url = 'https://url.publishedprices.co.il/login' 
-      WHERE name LIKE '%רמי לוי%' AND url LIKE '%rami-levy%'
-    `);
-  } catch (err) {
-    console.error('Migration error:', err.message);
-  }
+  } catch (err) { console.error('Migration error:', err.message); }
 
   // Seed default supermarkets if empty
   const count = await db.get('SELECT COUNT(*) as count FROM supermarkets');
@@ -141,7 +115,7 @@ async function initDb() {
       { name: 'קרפור מרקט (נווה זאב)', url: 'https://www.carrefour.co.il/' },
       { name: 'קשת טעמים (ישפרו פלאנט)', url: 'https://www.keshet-teamim.co.il/' },
       { name: 'טאיו (חיים יחיל)', url: 'https://tayo.co.il/' },
-      { name: 'מחסני השוק (כללי)', url: 'https://www.mahsaneyshak.co.il/online' } // Placeholder URL
+      { name: 'מחסני השוק (כללי)', url: 'https://www.mahsaneyshak.co.il/online' } 
     ];
 
     for (const s of defaults) {

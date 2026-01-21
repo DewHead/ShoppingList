@@ -742,41 +742,25 @@ app.post('/api/scrape/:id', async (req, res) => {
 async function start() {
   db = await initDb();
 
-  // Auto-populate FTS if empty
+  // Check if FTS index is empty (after schema fix) and populate it
   try {
     const ftsCount = await db.get('SELECT COUNT(*) as count FROM items_fts');
     if (ftsCount && ftsCount.count === 0) {
       console.log("FTS index empty, populating from existing data...");
-      const items = await db.all(`
-        SELECT remote_name, remote_id, supermarket_id, price, branch_info 
-        FROM supermarket_items
-      `);
-      
+      const items = await db.all('SELECT remote_name, remote_id, supermarket_id, price, branch_info FROM supermarket_items');
       if (items.length > 0) {
         await db.run('BEGIN TRANSACTION');
-        const insert = await db.prepare(`
-          INSERT INTO items_fts (remote_name, remote_id, supermarket_id, price, branch_info)
-          VALUES (?, ?, ?, ?, ?)
-        `);
+        const insert = await db.prepare('INSERT INTO items_fts (remote_name, remote_id, supermarket_id, price, branch_info) VALUES (?, ?, ?, ?, ?)');
         for (const item of items) {
-          await insert.run(
-            item.remote_name, 
-            item.remote_id, 
-            item.supermarket_id, 
-            item.price, 
-            item.branch_info
-          );
+          await insert.run(item.remote_name, item.remote_id, item.supermarket_id, item.price, item.branch_info);
         }
         await insert.finalize();
         await db.run('COMMIT');
         console.log(`Population complete. Indexed ${items.length} items.`);
-      } else {
-        console.log("No existing items to populate.");
       }
     }
   } catch (err) {
-    console.error("Error auto-populating FTS:", err);
-    try { await db.run('ROLLBACK'); } catch (e) {}
+    console.error("Error during startup FTS check:", err);
   }
 
   server.listen(port, () => {

@@ -80,33 +80,18 @@ function fixSpacing(text) {
   if (!text) return text;
   let fixed = text;
 
-  // 1. Normalize measurement patterns like "40*8" or "8*40"
-  // Try to identify if it's "Weight * Count" or "Count * Weight" and turn it into "Count יח * Weight Units"
+  // 1. Normalize measurement patterns like "40*8"
   fixed = fixed.replace(/(\d+(\.\d+)?)\s*\*\s*(ג|גר|גרם|מל|מ"ל)?\s*(\d+(\.\d+)?)/g, (match, p1, p2, unit, p4, p5) => {
       let numA = parseFloat(p1);
       let numB = parseFloat(p4);
-      
       let weight, count;
-      // Heuristic: for most items, weight is the larger number (e.g., 40g vs 8 units)
-      // Except for small things like tea bags (1.5g vs 100 units)
       if (numA > numB) {
-          if (numB <= 30) { // Likely count
-              weight = numA;
-              count = numB;
-          } else { // e.g., 100 * 1.5
-              weight = numB;
-              count = numA;
-          }
+          if (numB <= 30) { weight = numA; count = numB; } 
+          else { weight = numB; count = numA; }
       } else {
-          if (numA <= 30) { // Likely count
-              weight = numB;
-              count = numA;
-          } else {
-              weight = numA;
-              count = numB;
-          }
+          if (numA <= 30) { weight = numB; count = numA; } 
+          else { weight = numA; count = numB; }
       }
-      
       const finalUnit = (unit === 'מל' || unit === 'מ"ל') ? 'מ"ל' : 'גרם';
       return `${count} יח * ${weight} ${finalUnit}`;
   });
@@ -114,17 +99,16 @@ function fixSpacing(text) {
   // 2. Insert space between Hebrew/English letter and Number
   fixed = fixed.replace(/([a-zA-Z\u0590-\u05FF])(\d)/g, '$1 $2');
   fixed = fixed.replace(/(\d)([a-zA-Z\u0590-\u05FF])/g, '$1 $2');
-  
+
   // 3. Specific fix for percent sign
   fixed = fixed.replace(/(%)(\S)/g, '$1 $2');
 
-  // 4. Normalize common units and their placement
-  // "60* גרם" -> "60 גרם"
+  // 4. Normalize common units
   fixed = fixed.replace(/(\d+)\s*\*\s*(ג|גר|גרם|מל|מ"ל)(\s|$)/g, '$1 $2$3');
-  
-  // Normalize units to full words or standard forms
   fixed = fixed.replace(/(\d+)\s*(ג|גר|גר')(\s|$)/g, '$1 גרם$3');
   fixed = fixed.replace(/(\d+)\s*(מל|מ"ל|מ'|מ)(\s|$)/g, '$1 מ"ל$3');
+
+  // NEW: Normalize Liter variations
   fixed = fixed.replace(/(\d+)\s*(ליטר|ליט|ל'|ל)(\s|$)/g, '$1 ליטר$3');
 
   // 5. Final space normalization
