@@ -29,6 +29,40 @@ function toHebrew(str) {
   return str.split('').map(char => map[char.toLowerCase()] || char).join('');
 }
 
+// Helper to update the FTS index for a store
+async function updateFtsIndex(storeId) {
+    try {
+        console.log(`Updating FTS index for store ${storeId}...`);
+        await db.run('DELETE FROM items_fts WHERE supermarket_id = ?', [storeId]);
+        
+        const items = await db.all(`
+            SELECT remote_name, remote_id, supermarket_id, price, branch_info 
+            FROM supermarket_items 
+            WHERE supermarket_id = ?
+        `, [storeId]);
+        
+        if (items.length > 0) {
+            await db.run('BEGIN TRANSACTION');
+            const insert = await db.prepare(`
+                INSERT INTO items_fts (remote_name, remote_id, supermarket_id, price, branch_info)
+                VALUES (?, ?, ?, ?, ?)
+            `);
+            for (const item of items) {
+                await insert.run(item.remote_name, item.remote_id, item.supermarket_id, item.price, item.branch_info);
+            }
+            await insert.finalize();
+            await db.run('COMMIT');
+        }
+        console.log(`FTS index updated for store ${storeId} with ${items.length} items.`);
+    } catch (err) {
+        console.error(`Error updating FTS index for store ${storeId}:`, err);
+        // Don't throw, just log, so we don't break the main flow if FTS fails
+        if (db) {
+            try { await db.run('ROLLBACK'); } catch (e) {}
+        }
+    }
+}
+
 // Helper to save discovery results directly from server-side scraper
 async function saveDiscoveryResults(storeId, products, promos) {
   try {
@@ -117,8 +151,14 @@ async function saveDiscoveryResults(storeId, products, promos) {
       await insertPromoStmt.finalize();
       await db.run('COMMIT');
     }
+
+    // 3. Update FTS Index
+    await updateFtsIndex(storeId);
+
   } catch (err) {
-    if (db) await db.run('ROLLBACK');
+    if (db) {
+        try { await db.run('ROLLBACK'); } catch (e) {}
+    }
     console.error('Error saving discovery data:', err.message);
   }
 }
@@ -377,25 +417,7 @@ function getTermVariations(term) {
     return res;
 }
 
-const buildConditions = (terms, includeVariations = true, cleanExpr) => {
-    const termConditions = terms.map(term => {
-        const variations = includeVariations ? getTermVariations(term) : [term];
-        const variationClause = variations.map(() => `${cleanExpr} LIKE ? ESCAPE '\\'`).join(' OR ');
-        return `(${variationClause})`; 
-    });
-    return termConditions.join(' AND ');
-};
-
-const buildParams = (terms, includeVariations = true) => {
-    const params = [];
-    terms.forEach(term => {
-        const variations = includeVariations ? getTermVariations(term) : [term];
-        variations.forEach(v => params.push(`% ${escapeLike(v)} %`));
-    });
-    return params;
-};
-
-// Search across all products
+// Search across all products using FTS
 app.post('/api/search-all-products', async (req, res) => {
   const { query } = req.body;
   if (!query || query.length < 2) {
@@ -403,109 +425,50 @@ app.post('/api/search-all-products', async (req, res) => {
   }
   
   try {
-    let rawTerms = query.trim().split(/\s+/);
-    
-    // Auto-convert to Hebrew if input looks like English (and searching for Hebrew products)
+    const terms = query.trim().split(/\s+/);
     const hebrewQuery = toHebrew(query);
-    // If the conversion is different (meaning input had mappable chars), allow searching for both
-    // For simplicity, let's just search for the Hebrew version if the original yields no/low results OR just search for both always.
-    // Searching for both is safer.
-    if (hebrewQuery !== query) {
-        rawTerms.push(...hebrewQuery.trim().split(/\s+/));
-    }
+    const hebrewTerms = hebrewQuery !== query ? hebrewQuery.trim().split(/\s+/) : [];
     
-    // De-duplicate terms
-    rawTerms = [...new Set(rawTerms)];
+    // Build FTS Match String
+    // Logic: (term1 OR hebrewTerm1) AND (term2 OR hebrewTerm2) ...
+    const buildFtsQuery = (terms, altTerms) => {
+        return terms.map((term, i) => {
+            let part = `"${term.replace(/"/g, '""')}"*`; // Prefix search
+            if (altTerms[i]) {
+                part = `(${part} OR "${altTerms[i].replace(/"/g, '""')}"*)`;
+            }
+            return part;
+        }).join(' AND ');
+    };
 
-    const cleanNameExpr = `
-      ' ' || 
-      REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(si.remote_name, ',', ' '), '-', ' '), ')', ' '), '(', ' '), '''', ' ') 
-      || ' '
-    `;
+    const ftsQuery = buildFtsQuery(terms, hebrewTerms);
+    
+    // We also want to match exact remote_id or just simple containment if FTS fails or as supplementary
+    // But FTS is primary here. 
+    
+    const results = await db.all(`
+      SELECT 
+        items_fts.supermarket_id,
+        s.name as supermarket_name,
+        items_fts.remote_name,
+        items_fts.price,
+        items_fts.remote_id,
+        GROUP_CONCAT(sp.description, ' | ') as promo_description,
+        items_fts.branch_info
+      FROM items_fts
+      JOIN supermarkets s ON items_fts.supermarket_id = s.id
+      LEFT JOIN supermarket_promos sp ON 
+          sp.supermarket_id = items_fts.supermarket_id AND 
+          sp.remote_id = items_fts.remote_id AND 
+          sp.branch_info = items_fts.branch_info
+      WHERE items_fts MATCH ? AND s.is_active = 1
+      GROUP BY items_fts.supermarket_id, items_fts.remote_id
+      LIMIT 100
+    `, [ftsQuery]);
 
-    // Use ESCAPE '\' for each LIKE condition.
-    // For multiple terms, we usually want (term1 AND term2).
-    // If we have English + Hebrew variants, we want:
-    // (term1_eng OR term1_heb) AND (term2_eng OR term2_heb) ...
-    // But simplified approach: just treat all distinct tokens as OR candidates? No, user usually types one phrase.
-    // If user types "k,ui" -> "לחם". 
-    // We should probably run two separate queries logic: "Match original" OR "Match converted".
-    
-    // Construct conditions for Original Query OR Converted Query
-    const termsOriginal = query.trim().split(/\s+/);
-    const termsHebrew = hebrewQuery !== query ? hebrewQuery.trim().split(/\s+/) : [];
-    
-    const condOrigExact = buildConditions(termsOriginal, false, cleanNameExpr);
-    const parsOrigExact = buildParams(termsOriginal, false);
-    const condOrigVar = buildConditions(termsOriginal, true, cleanNameExpr);
-    const parsOrigVar = buildParams(termsOriginal, true);
-    
-    let whereClause = `((${condOrigVar}) OR si.remote_id LIKE ?)`;
-    let queryParams = [...parsOrigVar, `%${query}%`];
-    
-    let condHebExact = '1=0';
-    let parsHebExact = [];
-    let condHebVar = '1=0';
-    let parsHebVar = [];
-
-    if (termsHebrew.length > 0) {
-       condHebExact = buildConditions(termsHebrew, false, cleanNameExpr);
-       parsHebExact = buildParams(termsHebrew, false);
-       condHebVar = buildConditions(termsHebrew, true, cleanNameExpr);
-       parsHebVar = buildParams(termsHebrew, true);
-       
-       whereClause = `((${condOrigVar}) OR (${condHebVar}) OR si.remote_id LIKE ?)`;
-       queryParams = [...parsOrigVar, ...parsHebVar, `%${query}%`];
-    }
-
-    const finalQuery = `
-      SELECT * FROM (
-        SELECT 
-          si.supermarket_id,
-          s.name as supermarket_name,
-          si.remote_name,
-          si.price,
-          si.remote_id,
-          GROUP_CONCAT(sp.description, ' | ') as promo_description,
-          (
-            (CASE WHEN ${cleanNameExpr} LIKE ? ESCAPE '\\' THEN 150 ELSE 0 END) +
-            (CASE WHEN ${condOrigExact} THEN 100 ELSE 0 END) +
-            (CASE WHEN si.remote_name = ? THEN 50 ELSE 0 END) +
-            (CASE WHEN si.remote_name LIKE ? THEN 20 ELSE 0 END) +
-            (CASE WHEN ${condOrigVar} THEN 10 ELSE 0 END) +
-            (CASE WHEN ${condHebVar} THEN 10 ELSE 0 END)
-          ) as score
-        FROM supermarket_items si
-        JOIN supermarkets s ON si.supermarket_id = s.id
-        LEFT JOIN supermarket_promos sp ON 
-            sp.supermarket_id = si.supermarket_id AND 
-            sp.remote_id = si.remote_id AND 
-            sp.branch_info = si.branch_info
-        WHERE (${whereClause} OR si.remote_id = ?) AND s.is_active = 1
-        GROUP BY si.supermarket_id, si.remote_id
-      ) WHERE score > 0
-      ORDER BY 
-        score DESC,
-        LENGTH(remote_name) ASC,
-        price ASC
-    `;
-    
-    // Params for scoring and where clause
-    const allParams = [
-        `% ${escapeLike(query)} %`, // for whole phrase match score
-        ...parsOrigExact,           // for condOrigExact in score
-        query,                      // for exact match score
-        `${query}%`,                // for starts-with score
-        ...parsOrigVar,             // for condOrigVar in score
-        ...parsHebVar,              // for condHebVar in score
-        ...queryParams,             // for whereClause
-        query                       // for remote_id match
-    ];
-    
-    const results = await db.all(finalQuery, allParams);
     res.json(results);
   } catch (err) {
-    console.error('Error searching products:', err.message);
+    console.error('Error searching products (FTS):', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -516,14 +479,51 @@ app.get('/api/comparison', async (req, res) => {
     const { showSbox = 'false' } = req.query;
     const activeSupermarkets = await db.all('SELECT id, name FROM supermarkets WHERE is_active = 1');
     const shoppingList = await db.all(`
-      SELECT sl.id as listId, sl.quantity, i.name as itemName
+      SELECT sl.id as listId, sl.quantity, i.name as itemName, i.id as itemId
       FROM shopping_list sl
       JOIN items i ON sl.item_id = i.id
     `);
 
     const comparisonResults = {};
 
-    const findBestMatchForStore = async (query, storeId, showCreditCardPromos) => {
+    const findBestMatchForStore = async (itemName, storeId, showCreditCardPromos, itemId) => {
+        // 1. Check for manual override (Pinning)
+        const pinned = await db.get(`
+            SELECT remote_id FROM item_matches 
+            WHERE shopping_list_item_id = ? AND supermarket_id = ?
+        `, [itemId, storeId]);
+
+        if (pinned) {
+            const pinnedItem = await db.get(`
+                SELECT 
+                    si.remote_name, 
+                    si.price, 
+                    si.remote_id, 
+                    GROUP_CONCAT(
+                        CASE 
+                            WHEN ? = 'true' OR sp.description NOT LIKE '%SBOX%' 
+                            THEN sp.description 
+                            ELSE NULL 
+                        END, 
+                        ' | '
+                    ) as promo_description
+                FROM supermarket_items si
+                LEFT JOIN supermarket_promos sp ON 
+                    sp.supermarket_id = si.supermarket_id AND 
+                    sp.remote_id = si.remote_id AND 
+                    sp.branch_info = si.branch_info
+                WHERE si.supermarket_id = ? AND si.remote_id = ?
+                GROUP BY si.remote_id
+            `, [showCreditCardPromos, storeId, pinned.remote_id]);
+            
+            if (pinnedItem) return pinnedItem;
+        }
+
+        // 2. Fallback to existing search logic (Legacy LIKE-based for now to ensure consistency, 
+        //    or switch to FTS if desired. The prompt said "proceed with existing logic", 
+        //    so I will paste the previous logic back here.)
+        
+        const query = itemName;
         const hebrewQuery = toHebrew(query);
         const termsOriginal = query.trim().split(/\s+/);
         const termsHebrew = hebrewQuery !== query ? hebrewQuery.trim().split(/\s+/) : [];
@@ -533,6 +533,24 @@ app.get('/api/comparison', async (req, res) => {
           REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(si.remote_name, ',', ' '), '-', ' '), ')', ' '), '(', ' '), '''', ' ') 
           || ' '
         `;
+
+        const buildConditions = (terms, includeVariations = true, cleanExpr) => {
+            const termConditions = terms.map(term => {
+                const variations = includeVariations ? getTermVariations(term) : [term];
+                const variationClause = variations.map(() => `${cleanExpr} LIKE ? ESCAPE '\\'`).join(' OR ');
+                return `(${variationClause})`; 
+            });
+            return termConditions.join(' AND ');
+        };
+
+        const buildParams = (terms, includeVariations = true) => {
+            const params = [];
+            terms.forEach(term => {
+                const variations = includeVariations ? getTermVariations(term) : [term];
+                variations.forEach(v => params.push(`% ${escapeLike(v)} %`));
+            });
+            return params;
+        };
 
         const condOrigExact = buildConditions(termsOriginal, false, cleanNameExpr);
         const parsOrigExact = buildParams(termsOriginal, false);
@@ -546,8 +564,8 @@ app.get('/api/comparison', async (req, res) => {
         let parsHebVar = [];
 
         if (termsHebrew.length > 0) {
-           const condHebVar = buildConditions(termsHebrew, true, cleanNameExpr);
-           const parsHebVar = buildParams(termsHebrew, true);
+           condHebVar = buildConditions(termsHebrew, true, cleanNameExpr);
+           parsHebVar = buildParams(termsHebrew, true);
            
            whereClause = `((${condOrigVar}) OR (${condHebVar}) OR si.remote_id LIKE ?)`;
            queryParams = [...parsOrigVar, ...parsHebVar, `%${query}%`];
@@ -605,14 +623,16 @@ app.get('/api/comparison', async (req, res) => {
     for (const store of activeSupermarkets) {
       const results = [];
       for (const item of shoppingList) {
-          const match = await findBestMatchForStore(item.itemName, store.id, showSbox);
+          const match = await findBestMatchForStore(item.itemName, store.id, showSbox, item.itemId);
           results.push({
-              item: { itemName: item.itemName },
+              item: { itemName: item.itemName, id: item.itemId }, // include ID for frontend usage if needed
               name: match ? match.remote_name : 'Not Found',
               price: match ? `₪${(match.price * item.quantity).toFixed(2)}` : 'N/A',
               rawPrice: match ? match.price : 0,
               quantity: item.quantity,
-              promo_description: match ? match.promo_description : null
+              promo_description: match ? match.promo_description : null,
+              remote_id: match ? match.remote_id : null,
+              supermarket_id: store.id
           });
       }
 
@@ -625,6 +645,27 @@ app.get('/api/comparison', async (req, res) => {
     res.json(comparisonResults);
   } catch (err) {
     console.error('Error fetching comparison:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint to pin a specific match for a shopping list item in a store
+app.put('/api/shopping-list/match', async (req, res) => {
+  const { shoppingListItemId, supermarketId, remoteId } = req.body;
+  
+  if (!shoppingListItemId || !supermarketId || !remoteId) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    await db.run(`
+      REPLACE INTO item_matches (shopping_list_item_id, supermarket_id, remote_id)
+      VALUES (?, ?, ?)
+    `, [shoppingListItemId, supermarketId, remoteId]);
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error saving item match:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

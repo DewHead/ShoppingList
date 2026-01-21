@@ -57,6 +57,22 @@ async function initDb() {
       last_updated DATETIME,
       FOREIGN KEY (supermarket_id) REFERENCES supermarkets (id)
     );
+
+    CREATE VIRTUAL TABLE IF NOT EXISTS items_fts USING fts5(
+      remote_name, 
+      remote_id, 
+      supermarket_id UNINDEXED, 
+      price UNINDEXED, 
+      branch_info UNINDEXED,
+      tokenize='trigram'
+    );
+
+    CREATE TABLE IF NOT EXISTS item_matches (
+      shopping_list_item_id INTEGER,
+      supermarket_id INTEGER,
+      remote_id TEXT,
+      PRIMARY KEY (shopping_list_item_id, supermarket_id)
+    );
   `);
 
   // Migration: Add branch_info to supermarket_items if not present

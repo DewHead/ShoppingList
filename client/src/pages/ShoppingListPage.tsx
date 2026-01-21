@@ -16,6 +16,7 @@ import {
   FormControlLabel
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { PushPin, PushPinOutlined } from '@mui/icons-material';
 import { AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -197,6 +198,7 @@ const ShoppingListPage = () => {
     fetchList();
     fetchKnownItems();
     fetchSupermarkets();
+    fetchComparison();
 
     socket.on('results', (data) => {
       setStoreResults(prev => ({ ...prev, [data.storeId]: data.results }));
@@ -225,6 +227,20 @@ const ShoppingListPage = () => {
     setSupermarkets(res.data);
   };
 
+  const fetchComparison = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/comparison`);
+      // API returns { storeId: { results: [...], coupons: [] } }
+      const formatted: Record<number, any[]> = {};
+      Object.entries(res.data).forEach(([id, data]: [string, any]) => {
+        formatted[Number(id)] = data.results;
+      });
+      setStoreResults(formatted);
+    } catch (err) {
+      console.error('Error fetching comparison:', err);
+    }
+  };
+
 
   const fetchList = async () => {
     const res = await axios.get(`${API_BASE_URL}/api/shopping-list`);
@@ -234,6 +250,22 @@ const ShoppingListPage = () => {
   const fetchKnownItems = async () => {
     const res = await axios.get(`${API_BASE_URL}/api/items`);
     setKnownItems(res.data);
+  };
+
+  const handlePin = async (item: ShoppingListItem, match: SearchResult) => {
+    try {
+        await axios.put(`${API_BASE_URL}/api/shopping-list/match`, {
+            shoppingListItemId: item.id,
+            supermarketId: match.supermarket_id,
+            remoteId: match.remote_id
+        });
+        setNotification("Item pinned!");
+        setTimeout(() => setNotification(null), 3000);
+        fetchComparison(); 
+    } catch (err) {
+        console.error(err);
+        setNotification("Error pinning item");
+    }
   };
 
   const addItem = async () => {
@@ -353,23 +385,55 @@ const ShoppingListPage = () => {
   const cheapestStore = useMemo(() => {
     let cheapest: any = null;
     let lowestTotal = Infinity;
+    const PENALTY_PRICE = 15 * 1.2;
 
     Object.keys(storeResults).forEach(storeId => {
       const results = storeResults[Number(storeId)];
       if (!results || results.length === 0) return;
 
-      const total = results.reduce((sum, r) => {
-        const price = parseFloat(r.price.replace(/[^\d.]/g, '')) || 0;
-        return sum + price;
-      }, 0);
+      let currentTotal = 0;
+      let missingCount = 0;
 
-      if (total < lowestTotal) {
-        lowestTotal = total;
+      results.forEach((r: any) => {
+        let itemPrice = 0;
+        let isMissing = false;
+
+        // Check if price is valid (not 'N/A', 'NA', or 0)
+        // r.price comes from server as string "₪12.90" or "N/A"
+        // r.rawPrice is the numeric unit price
+        const priceStr = String(r.price);
+        if (priceStr === 'N/A' || priceStr === 'NA' || r.rawPrice === 0) {
+            isMissing = true;
+        } else {
+            const priceVal = parseFloat(priceStr.replace(/[^\d.]/g, ''));
+            if (isNaN(priceVal) || priceVal === 0) {
+                isMissing = true;
+            } else {
+                itemPrice = priceVal;
+            }
+        }
+
+        if (isMissing) {
+            missingCount++;
+            itemPrice = PENALTY_PRICE * (r.quantity || 1);
+        }
+
+        currentTotal += itemPrice;
+      });
+
+      // Ignore store if more than 40% items are missing
+      if (results.length > 0 && (missingCount / results.length) > 0.40) {
+          return;
+      }
+
+      if (currentTotal < lowestTotal) {
+        lowestTotal = currentTotal;
         const supermarket = supermarkets.find(s => s.id === Number(storeId));
         cheapest = {
           ...supermarket,
           total: lowestTotal.toFixed(2),
           results,
+          missing: missingCount
         };
       }
     });
@@ -630,6 +694,8 @@ const ShoppingListPage = () => {
                                                     if (isOverallCheapest) priceColor = 'success.main';
                                                     else if (isStoreCheapest) priceColor = 'warning.main';
 
+                                                    const isPinned = storeResults[match.supermarket_id]?.find((r: any) => r.item.id === item.id)?.remote_id === match.remote_id;
+                                                    
                                                     return (
                                                         <ListItem key={match.remote_id} disableGutters sx={{ py: 0.5 }}>
                                                             <ListItemText 
@@ -666,6 +732,14 @@ const ShoppingListPage = () => {
                                                                 primaryTypographyProps={{ component: 'div' }}
                                                             />
                                                             <Box sx={{ textAlign: 'right', ml: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                                <IconButton 
+                                                                    size="small" 
+                                                                    onClick={(e) => { e.stopPropagation(); handlePin(item, match); }}
+                                                                    color={isPinned ? "primary" : "default"}
+                                                                    sx={{ p: 0.5 }}
+                                                                >
+                                                                    {isPinned ? <PushPin fontSize="small" /> : <PushPinOutlined fontSize="small" />}
+                                                                </IconButton>
                                                                 <Typography variant="caption" sx={{ color: 'text.secondary', whiteSpace: 'nowrap', fontSize: '0.95rem' }}>
                                                                     ₪{match.price.toFixed(2)}
                                                                 </Typography>
@@ -714,7 +788,14 @@ const ShoppingListPage = () => {
             <Paper elevation={0} sx={{ p: 2 }}>
               <Typography variant="h6" sx={{ mb: 1, fontSize: '1.4rem' }}>{t('cheapestStore')}</Typography>
               <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <Typography variant="h5" sx={{ fontSize: '1.5rem', fontWeight: 700 }}>{cheapestStore.name}</Typography>
+                <Box>
+                  <Typography variant="h5" sx={{ fontSize: '1.5rem', fontWeight: 700 }}>{cheapestStore.name}</Typography>
+                  {cheapestStore.missing > 0 && (
+                    <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>
+                      * {cheapestStore.missing} items missing (estimated)
+                    </Typography>
+                  )}
+                </Box>
                 <Typography variant="h4" color="secondary.main" sx={{ fontWeight: 800, fontSize: '2rem' }}>
                   ₪{cheapestStore.total}
                 </Typography>
