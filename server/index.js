@@ -512,18 +512,54 @@ app.get('/api/comparison', async (req, res) => {
     const comparisonResults = {};
 
     const findBestMatchForStore = async (itemName, storeId, showCreditCardPromos, itemId) => {
-        // 1. Check for manual override (Pinning)
-        const pinned = await db.get(`
-            SELECT remote_id FROM item_matches 
-            WHERE shopping_list_item_id = ? AND supermarket_id = ?
-        `, [itemId, storeId]);
+        // 1. Check for manual override (Pinning) first
+        try {
+            const pinned = await db.get(`
+                SELECT remote_id FROM item_matches 
+                WHERE shopping_list_item_id = ? AND supermarket_id = ?
+            `, [itemId, storeId]);
 
-        if (pinned) {
-            const pinnedItem = await db.get(`
+            if (pinned) {
+                const pinnedItem = await db.get(`
+                    SELECT 
+                        si.remote_name, 
+                        si.price, 
+                        si.remote_id, 
+                        GROUP_CONCAT(
+                            CASE 
+                                WHEN ? = 'true' OR sp.description NOT LIKE '%SBOX%' 
+                                THEN sp.description 
+                                ELSE NULL 
+                            END, 
+                            ' | '
+                        ) as promo_description
+                    FROM supermarket_items si
+                    LEFT JOIN supermarket_promos sp ON 
+                        sp.supermarket_id = si.supermarket_id AND 
+                        sp.remote_id = si.remote_id AND 
+                        sp.branch_info = si.branch_info
+                    WHERE si.supermarket_id = ? AND si.remote_id = ?
+                    GROUP BY si.remote_id
+                `, [showCreditCardPromos, storeId, pinned.remote_id]);
+                
+                if (pinnedItem) return pinnedItem;
+            }
+        } catch (e) { console.error("Pin check failed:", e); }
+
+        // 2. Use FTS (Smart Search) for automatic matching
+        // This handles "1 ל" -> "1 ליטר" matching automatically thanks to FTS tokenization
+        try {
+            const cleanQuery = itemName.replace(/["']/g, ''); // Safety
+            const terms = cleanQuery.trim().split(/\s+/);
+            
+            // Build FTS Query: "milk"* AND "1"* ...
+            const ftsQuery = terms.map(t => `"${t}"*`).join(' AND ');
+
+            const match = await db.get(`
                 SELECT 
-                    si.remote_name, 
-                    si.price, 
-                    si.remote_id, 
+                    items_fts.remote_name,
+                    items_fts.price,
+                    items_fts.remote_id,
                     GROUP_CONCAT(
                         CASE 
                             WHEN ? = 'true' OR sp.description NOT LIKE '%SBOX%' 
@@ -532,117 +568,23 @@ app.get('/api/comparison', async (req, res) => {
                         END, 
                         ' | '
                     ) as promo_description
-                FROM supermarket_items si
+                FROM items_fts
                 LEFT JOIN supermarket_promos sp ON 
-                    sp.supermarket_id = si.supermarket_id AND 
-                    sp.remote_id = si.remote_id AND 
-                    sp.branch_info = si.branch_info
-                WHERE si.supermarket_id = ? AND si.remote_id = ?
-                GROUP BY si.remote_id
-            `, [showCreditCardPromos, storeId, pinned.remote_id]);
+                    sp.supermarket_id = items_fts.supermarket_id AND 
+                    sp.remote_id = items_fts.remote_id AND 
+                    (sp.branch_info IS NULL OR sp.branch_info = items_fts.branch_info)
+                WHERE items_fts.supermarket_id = ? AND items_fts MATCH ?
+                GROUP BY items_fts.remote_id
+                ORDER BY items_fts.rank
+                LIMIT 1
+            `, [showCreditCardPromos, storeId, ftsQuery]);
             
-            if (pinnedItem) return pinnedItem;
+            return match;
+
+        } catch (err) {
+            console.error("FTS Matching failed:", err);
+            return null;
         }
-
-        // 2. Fallback to existing search logic (Legacy LIKE-based for now to ensure consistency, 
-        //    or switch to FTS if desired. The prompt said "proceed with existing logic", 
-        //    so I will paste the previous logic back here.)
-        
-        const query = itemName;
-        const hebrewQuery = toHebrew(query);
-        const termsOriginal = query.trim().split(/\s+/);
-        const termsHebrew = hebrewQuery !== query ? hebrewQuery.trim().split(/\s+/) : [];
-
-        const cleanNameExpr = `
-          ' ' || 
-          REPLACE(REPLACE(REPLACE(REPLACE(si.remote_name, ',', ' '), '-', ' '), ')', ' '), '(', ' ') 
-          || ' '
-        `;
-
-        const buildConditions = (terms, includeVariations = true, cleanExpr) => {
-            const termConditions = terms.map(term => {
-                const variations = includeVariations ? getTermVariations(term) : [term];
-                const variationClause = variations.map(() => `${cleanExpr} LIKE ? ESCAPE '\\'`).join(' OR ');
-                return `(${variationClause})`; 
-            });
-            return termConditions.join(' AND ');
-        };
-
-        const buildParams = (terms, includeVariations = true) => {
-            const params = [];
-            terms.forEach(term => {
-                const variations = includeVariations ? getTermVariations(term) : [term];
-                variations.forEach(v => params.push(`% ${escapeLike(v)} %`));
-            });
-            return params;
-        };
-
-        const condOrigExact = buildConditions(termsOriginal, false, cleanNameExpr);
-        const parsOrigExact = buildParams(termsOriginal, false);
-        const condOrigVar = buildConditions(termsOriginal, true, cleanNameExpr);
-        const parsOrigVar = buildParams(termsOriginal, true);
-        
-        let whereClause = `((${condOrigVar}) OR si.remote_id LIKE ?)`;
-        let queryParams = [...parsOrigVar, `%${query}%`];
-        
-        let condHebVar = '1=0';
-        let parsHebVar = [];
-
-        if (termsHebrew.length > 0) {
-           condHebVar = buildConditions(termsHebrew, true, cleanNameExpr);
-           parsHebVar = buildParams(termsHebrew, true);
-           
-           whereClause = `((${condOrigVar}) OR (${condHebVar}) OR si.remote_id LIKE ?)`;
-           queryParams = [...parsOrigVar, ...parsHebVar, `%${query}%`];
-        }
-
-        const matchQuery = `
-          SELECT * FROM (
-            SELECT 
-              si.remote_name,
-              si.price,
-              si.remote_id,
-              GROUP_CONCAT(
-                  CASE 
-                      WHEN ? = 'true' OR sp.description NOT LIKE '%SBOX%' 
-                      THEN sp.description 
-                      ELSE NULL 
-                  END, 
-                  ' | '
-              ) as promo_description,
-              (
-                (CASE WHEN ${cleanNameExpr} LIKE ? ESCAPE '\\' THEN 150 ELSE 0 END) +
-                (CASE WHEN ${condOrigExact} THEN 100 ELSE 0 END) +
-                (CASE WHEN si.remote_name = ? THEN 50 ELSE 0 END) +
-                (CASE WHEN si.remote_name LIKE ? THEN 20 ELSE 0 END) +
-                (CASE WHEN ${condOrigVar} THEN 10 ELSE 0 END) +
-                (CASE WHEN ${condHebVar} THEN 10 ELSE 0 END)
-              ) as score
-            FROM supermarket_items si
-            LEFT JOIN supermarket_promos sp ON 
-                sp.supermarket_id = si.supermarket_id AND 
-                sp.remote_id = si.remote_id AND 
-                sp.branch_info = si.branch_info
-            WHERE si.supermarket_id = ? AND (${whereClause})
-            GROUP BY si.remote_id
-          ) WHERE score > 0
-          ORDER BY score DESC, LENGTH(remote_name) ASC, price ASC
-          LIMIT 1
-        `;
-
-        const allParams = [
-            showCreditCardPromos,
-            `% ${escapeLike(query)} %`,
-            ...parsOrigExact,
-            query,
-            `${query}%`,
-            ...parsOrigVar,
-            ...parsHebVar,
-            storeId,
-            ...queryParams
-        ];
-
-        return await db.get(matchQuery, allParams);
     };
 
     for (const store of activeSupermarkets) {
