@@ -8,10 +8,10 @@ async function initDb() {
     driver: sqlite3.Database
   });
 
-  // Check for FTS migration (trigram -> unicode61)
+  // Check for FTS migration (trigram -> unicode61 or missing tokenchars)
   const ftsTable = await db.get("SELECT sql FROM sqlite_master WHERE name='items_fts'");
-  if (ftsTable && ftsTable.sql && ftsTable.sql.includes('trigram')) {
-    console.log('Migrating items_fts from trigram to unicode61...');
+  if (ftsTable && ftsTable.sql && (ftsTable.sql.includes('trigram') || !ftsTable.sql.includes("tokenchars"))) {
+    console.log('Migrating items_fts (tokenizer update)...');
     await db.exec('DROP TABLE items_fts');
   }
 
@@ -71,7 +71,7 @@ async function initDb() {
       supermarket_id UNINDEXED, 
       price UNINDEXED, 
       branch_info UNINDEXED,
-      tokenize='unicode61'
+      tokenize='unicode61 tokenchars '''''
     );
 
     CREATE TABLE IF NOT EXISTS item_matches (

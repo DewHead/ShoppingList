@@ -209,7 +209,7 @@ app.get('/api/supermarkets/:id/items', async (req, res) => {
     if (search) {
       const cleanNameExpr = `
         ' ' || 
-        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(si.remote_name, ',', ' '), '-', ' '), ')', ' '), '(', ' '), '''', ' ') 
+        REPLACE(REPLACE(REPLACE(REPLACE(si.remote_name, ',', ' '), '-', ' '), ')', ' '), '(', ' ') 
         || ' '
       `;
       
@@ -384,6 +384,23 @@ function escapeLike(str) {
 
 function getTermVariations(term) {
     const res = [term];
+
+    // Unit Synonyms
+    const unitGroups = [
+        ['ל\'', 'ליטר', 'ליט', 'ל', 'liter', 'l', 'ml', 'מ"ל', 'מל'],
+        ['ק"ג', 'קג', 'קילו', 'קילוגרם', 'kg', 'kilo'],
+        ['גרם', 'ג\'', 'g', 'gr', 'gm']
+    ];
+
+    const lowerTerm = term.toLowerCase();
+    for (const group of unitGroups) {
+        if (group.includes(lowerTerm)) {
+            group.forEach(v => {
+                if (v !== lowerTerm) res.push(v);
+            });
+        }
+    }
+
     // Hebrew Construct State Heuristic (Semichut)
     // Endings: ה <-> ת
     // Plural: ה <-> ות
@@ -425,23 +442,31 @@ app.post('/api/search-all-products', async (req, res) => {
   }
   
   try {
-    const terms = query.trim().split(/\s+/);
-    const hebrewQuery = toHebrew(query);
-    const hebrewTerms = hebrewQuery !== query ? hebrewQuery.trim().split(/\s+/) : [];
+    const rawTerms = query.trim().split(/\s+/);
     
-    // Build FTS Match String
-    // Logic: (term1 OR hebrewTerm1) AND (term2 OR hebrewTerm2) ...
-    const buildFtsQuery = (terms, altTerms) => {
-        return terms.map((term, i) => {
-            let part = `"${term.replace(/"/g, '""')}"*`; // Prefix search
-            if (altTerms[i]) {
-                part = `(${part} OR "${altTerms[i].replace(/"/g, '""')}"*)`;
+    // Build FTS Match String with expanded variations
+    const buildFtsQuery = (terms) => {
+        return terms.map((term) => {
+            // 1. Get base variations (synonyms, Hebrew grammar)
+            const variations = getTermVariations(term);
+            
+            // 2. Handle English->Hebrew mapping (e.g. 'k' -> 'ל')
+            const hebTerm = toHebrew(term);
+            if (hebTerm !== term) {
+                 // Get variations for the mapped term too
+                 variations.push(...getTermVariations(hebTerm));
             }
-            return part;
+
+            // 3. Unique
+            const unique = [...new Set(variations)];
+
+            // 4. Build FTS string: "(v1* OR v2* ...)"
+            const parts = unique.map(v => `"${v.replace(/"/g, '""')}"*`);
+            return `(${parts.join(' OR ')})`;
         }).join(' AND ');
     };
 
-    const ftsQuery = buildFtsQuery(terms, hebrewTerms);
+    const ftsQuery = buildFtsQuery(rawTerms);
     
     // We also want to match exact remote_id or just simple containment if FTS fails or as supplementary
     // But FTS is primary here. 
@@ -530,7 +555,7 @@ app.get('/api/comparison', async (req, res) => {
 
         const cleanNameExpr = `
           ' ' || 
-          REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(si.remote_name, ',', ' '), '-', ' '), ')', ' '), '(', ' '), '''', ' ') 
+          REPLACE(REPLACE(REPLACE(REPLACE(si.remote_name, ',', ' '), '-', ' '), ')', ' '), '(', ' ') 
           || ' '
         `;
 
