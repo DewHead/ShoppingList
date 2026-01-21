@@ -1,0 +1,316 @@
+import { useEffect, useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Typography,
+  Switch,
+  Box,
+  List,
+  ListItem,
+  Paper,
+  useTheme,
+  IconButton,
+  Tooltip,
+  CircularProgress,
+  Tabs,
+  Tab,
+  Divider,
+  MenuItem,
+  Select
+} from '@mui/material';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import { Play, Store, Moon, Languages, Image as ImageIcon } from 'lucide-react';
+import axios from 'axios';
+import { useTranslation } from '../useTranslation';
+import { API_BASE_URL } from '../config';
+import { io } from 'socket.io-client';
+import { formatDistanceToNow } from 'date-fns';
+import { he } from 'date-fns/locale';
+import { AppContext } from '../AppContext';
+
+const socket = io(API_BASE_URL);
+
+interface Supermarket {
+  id: number;
+  name: string;
+  url: string;
+  is_active: number;
+  last_scrape_time: string | null;
+}
+
+const backgroundOptions = [
+  { name: 'monochrome', thumbnail: '/monochrome.png' },
+  { name: 'boho', thumbnail: '/boho.png' },
+  { name: 'cyberpunk', thumbnail: '/cyberpunk.png' },
+  { name: 'lineart', thumbnail: '/lineart.png' },
+  { name: 'nordic', thumbnail: '/nordic.png' },
+  { name: 'oilpainting', thumbnail: '/oilpainting.png' },
+  { name: 'popart', thumbnail: '/popart.png' },
+  { name: 'steampunk', thumbnail: '/steampunk.png' },
+  { name: 'tron', thumbnail: '/tron.png' },
+  { name: 'watercolor', thumbnail: '/watercolor.png' },
+];
+
+const SettingsPage = () => {
+  const theme = useTheme();
+  const { t, language } = useTranslation();
+  const navigate = useNavigate();
+  const { toggleColorMode, toggleLanguage, background, setBackground } = useContext(AppContext);
+
+  const [supermarkets, setSupermarkets] = useState<Supermarket[]>([]);
+  const [scrapingStates, setScrapingStates] = useState<Record<number, string | null>>({});
+  const [activeTab, setActiveTab] = useState(0);
+
+  useEffect(() => {
+    fetchSupermarkets();
+
+    socket.on('storeStatus', (data: { storeId: number, status: string }) => {
+        setScrapingStates(prev => ({ ...prev, [data.storeId]: data.status }));
+        if (data.status === 'Done' || data.status.startsWith('Error')) {
+            fetchSupermarkets();
+        }
+    });
+
+    const interval = setInterval(() => {
+      setScrapingStates(prev => ({ ...prev }));
+    }, 60000);
+
+    return () => {
+      socket.off('storeStatus');
+      clearInterval(interval);
+    };
+  }, []);
+
+  const fetchSupermarkets = async () => {
+    const res = await axios.get(`${API_BASE_URL}/api/supermarkets`);
+    setSupermarkets(res.data.map((s: Supermarket) => ({ ...s, status: null })));
+  };
+
+  const handleUpdate = async (id: number, field: string, value: any) => {
+    const updated = supermarkets.map(s => s.id === id ? { ...s, [field]: value } : s);
+    setSupermarkets(updated);
+
+    const supermarket = updated.find(s => s.id === id);
+    if (supermarket) {
+      await axios.put(`${API_BASE_URL}/api/supermarkets/${id}`, {
+        is_active: supermarket.is_active
+      });
+    }
+  };
+
+  const handleScrapeStore = async (storeId: number) => {
+    setScrapingStates(prev => ({ ...prev, [storeId]: 'Starting scrape...' }));
+    try {
+      await axios.post(`${API_BASE_URL}/api/scrape/${storeId}`);
+    } catch (err) {
+      console.error(`Error initiating scrape for store ${storeId}:`, err);
+      setScrapingStates(prev => ({ ...prev, [storeId]: `Error: ${err.message}` }));
+    }
+  };
+
+  const isDark = theme.palette.mode === 'dark';
+
+  return (
+    <Box sx={{ maxWidth: '1000px', mx: 'auto' }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" sx={{ mb: 1, fontWeight: 700 }}>{t('settings')}</Typography>
+        <Typography variant="body1" color="text.secondary">{t('settingsDescription')}</Typography>
+      </Box>
+
+      <Box sx={{ display: 'flex', gap: 4, minHeight: '400px' }}>
+        <Box sx={{ width: '240px', flexShrink: 0 }}>
+          <Tabs
+            orientation="vertical"
+            value={activeTab}
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            sx={{
+                borderRight: 1,
+                borderColor: 'divider',
+                '& .MuiTab-root': {
+                    alignItems: 'flex-start',
+                    textAlign: 'left',
+                    minHeight: '48px',
+                    borderRadius: 1,
+                    mb: 1,
+                    px: 2,
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    '&.Mui-selected': {
+                        bgcolor: 'action.selected'
+                    }
+                }
+            }}
+          >
+            <Tab icon={<Store size={20} />} iconPosition="start" label={language === 'he' ? 'הגדרות חנות' : 'Store settings'} />
+            <Tab icon={<Moon size={20} />} iconPosition="start" label={language === 'he' ? 'חזותי' : 'Visual'} />
+          </Tabs>
+        </Box>
+
+        <Box sx={{ flexGrow: 1 }}>
+          {activeTab === 0 && (
+            <Paper elevation={0} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+                <List sx={{ p: 0 }}>
+                {supermarkets.map((s, index) => (
+                    <ListItem
+                        key={s.id}
+                        sx={{
+                        p: 2,
+                        display: 'grid',
+                        gridTemplateColumns: '1fr auto auto auto auto',
+                        alignItems: 'center',
+                        gap: 2,
+                        borderBottom: index < supermarkets.length - 1 ? '1px solid' : 'none',
+                        borderColor: 'divider',
+                        }}
+                    >
+                        <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                            <Typography
+                                variant="h6"
+                                title={s.name}
+                                noWrap
+                                sx={{ fontWeight: 600, fontSize: '1.1rem', opacity: s.is_active ? 1 : 0.6 }}
+                            >
+                                {s.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ opacity: s.is_active ? 0.7 : 0.4 }}>
+                                {scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' ? (
+                                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                                        {scrapingStates[s.id] === 'Starting scrape...' && <CircularProgress size={14} />}
+                                        {scrapingStates[s.id]}
+                                    </Box>
+                                ) : (
+                                    s.last_scrape_time ? t('lastScrape', { date: formatDistanceToNow(new Date(s.last_scrape_time), { addSuffix: true, locale: language === 'he' ? he : undefined }) }) : t('neverScraped')
+                                )}
+                            </Typography>
+                        </Box>
+
+                        <Tooltip title={language === 'he' ? 'התחל גרידה עבור חנות זו' : 'Start Scrape for This Store'}>
+                            <Box component="span" sx={{ display: 'inline-block', bgcolor: theme.palette.mode === 'dark' ? 'rgba(103, 58, 183, 0.1)' : 'rgba(103, 58, 183, 0.05)', borderRadius: '50%' }}>
+                                <IconButton
+                                    onClick={() => handleScrapeStore(s.id)}
+                                    color="primary"
+                                    disabled={!s.is_active || !!scrapingStates[s.id]}
+                                >
+                                    {scrapingStates[s.id] ? <CircularProgress size={20} /> : <Play size={20} />}
+                                </IconButton>
+                            </Box>
+                        </Tooltip>
+
+                        <Tooltip title={language === 'he' ? 'הצג נתונים שנאספו' : 'Show Scraped Data'}>
+                            <IconButton
+                                onClick={() => navigate(`/scraped-data/${s.id}`)}
+                                color="primary"
+                                sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(103, 58, 183, 0.1)' : 'rgba(103, 58, 183, 0.05)' }}
+                            >
+                                <ListAltIcon />
+                            </IconButton>
+                        </Tooltip>
+
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Switch
+                                checked={s.is_active === 1}
+                                onChange={(e) => handleUpdate(s.id, 'is_active', e.target.checked ? 1 : 0)}
+                                color="primary"
+                            />
+                        </Box>
+                    </ListItem>
+                ))}
+                </List>
+            </Paper>
+          )}
+
+          {activeTab === 1 && (
+            <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
+                <Typography variant="h6" sx={{ mb: 3, fontWeight: 700 }}>{language === 'he' ? 'הגדרות תצוגה' : 'Appearance Settings'}</Typography>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Moon size={24} />
+                            <Box>
+                                <Typography variant="body1" sx={{ fontWeight: 600 }}>{language === 'he' ? 'מצב כהה' : 'Dark Mode'}</Typography>
+                                <Typography variant="caption" color="text.secondary">{language === 'he' ? 'שנה את ערכת הנושא של האפליקציה' : 'Toggle application theme'}</Typography>
+                            </Box>
+                        </Box>
+                        <Switch checked={isDark} onChange={toggleColorMode} color="primary" />
+                    </Box>
+
+                    <Divider />
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Languages size={24} />
+                            <Box>
+                                <Typography variant="body1" sx={{ fontWeight: 600 }}>{language === 'he' ? 'שפה' : 'Language'}</Typography>
+                                <Typography variant="caption" color="text.secondary">{language === 'he' ? 'בחר את שפת הממשק המועדפת עליך' : 'Select your preferred interface language'}</Typography>
+                            </Box>
+                        </Box>
+                        <Select
+                            value={language}
+                            size="small"
+                            onChange={(e) => toggleLanguage(e.target.value)}
+                            sx={{ minWidth: '120px' }}
+                        >
+                            <MenuItem value="he">עברית</MenuItem>
+                            <MenuItem value="en">English</MenuItem>
+                        </Select>
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                            <ImageIcon size={24} />
+                            <Box>
+                                <Typography variant="body1" sx={{ fontWeight: 600 }}>{language === 'he' ? 'רקע' : 'Background'}</Typography>
+                                <Typography variant="caption" color="text.secondary">{language === 'he' ? 'בחר את הרקע המועדף עליך' : 'Choose your favorite background'}</Typography>
+                            </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                            {backgroundOptions.map((option) => (
+                                <Box
+                                    key={option.name}
+                                    onClick={() => setBackground(option.name)}
+                                    sx={{
+                                        cursor: 'pointer',
+                                        borderRadius: 2,
+                                        border: '3px solid',
+                                        borderColor: background === option.name ? 'primary.main' : 'transparent',
+                                        overflow: 'hidden',
+                                        width: 150,
+                                        height: 100,
+                                        position: 'relative',
+                                        '&:hover': {
+                                            borderColor: 'primary.light',
+                                        },
+                                    }}
+                                >
+                                    <img src={option.thumbnail} alt={option.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            position: 'absolute',
+                                            bottom: 0,
+                                            left: 0,
+                                            right: 0,
+                                            bgcolor: 'rgba(0,0,0,0.6)',
+                                            color: 'white',
+                                            textAlign: 'center',
+                                            p: 0.5,
+                                        }}
+                                    >
+                                        {t(option.name)}
+                                    </Typography>
+                                </Box>
+                            ))}
+                        </Box>
+                    </Box>
+                </Box>
+            </Paper>
+          )}
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
+export default SettingsPage;
