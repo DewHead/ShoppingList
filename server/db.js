@@ -8,6 +8,13 @@ async function initDb() {
     driver: sqlite3.Database
   });
 
+  // Check for FTS migration (trigram -> unicode61)
+  const ftsTable = await db.get("SELECT sql FROM sqlite_master WHERE name='items_fts'");
+  if (ftsTable && ftsTable.sql && ftsTable.sql.includes('trigram')) {
+    console.log('Migrating items_fts from trigram to unicode61...');
+    await db.exec('DROP TABLE items_fts');
+  }
+
   await db.exec(`
     CREATE TABLE IF NOT EXISTS supermarkets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,7 +71,7 @@ async function initDb() {
       supermarket_id UNINDEXED, 
       price UNINDEXED, 
       branch_info UNINDEXED,
-      tokenize='trigram'
+      tokenize='unicode61'
     );
 
     CREATE TABLE IF NOT EXISTS item_matches (
