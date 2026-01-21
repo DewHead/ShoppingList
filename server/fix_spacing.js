@@ -51,6 +51,7 @@ function fixSpacing(text) {
   // Normalize units to full words or standard forms
   fixed = fixed.replace(/(\d+)\s*(ג|גר|גר')(\s|$)/g, '$1 גרם$3');
   fixed = fixed.replace(/(\d+)\s*(מל|מ"ל|מ'|מ)(\s|$)/g, '$1 מ"ל$3');
+  fixed = fixed.replace(/(\d+)\s*(ליטר|ליט|ל'|ל)(\s|$)/g, '$1 ליטר$3');
 
   // 5. Final space normalization
   fixed = fixed.replace(/\s+/g, ' ').trim();
