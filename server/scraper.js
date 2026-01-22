@@ -241,8 +241,8 @@ async function handleMahsaneyHashuk(page, supermarket, items, io, onResults) {
     
     // Wait for results
     try {
-        await page.waitForSelector('table tr a[href*="Download"]', { timeout: 60000 });
-    } catch(e) { console.log('Results (download links) not found (timeout)'); }
+        await page.waitForSelector('table tr', { timeout: 60000 });
+    } catch(e) { console.log('Results table not found (timeout)'); }
     await randomDelay(2000, 3000);
 
     const fileLinks = await page.$$eval('table tr', (rows) => {
@@ -400,6 +400,10 @@ async function handleMahsaneyHashuk(page, supermarket, items, io, onResults) {
 
     console.log(`Mahsaney Hashuk: extracted ${allDiscoveredProducts.length} products, ${allDiscoveredPromos.length} promos.`);
 
+    if (allDiscoveredProducts.length === 0 && allDiscoveredPromos.length === 0) {
+        throw new Error('Scrape failed: No products or promos found. See server logs.');
+    }
+
     if (onResults) {
         await onResults(supermarket.id, allDiscoveredProducts, allDiscoveredPromos);
     }
@@ -442,14 +446,28 @@ async function handleRamiLevy(page, supermarket, items, io, onResults, context) 
 
     console.log(`Found ${fileLinks.length} .gz files in Rami Levy portal.`);
     
-    // Filter: Only take the LATEST PriceFull and PROMO_FULL from all available files (no branch filter)
-    const latestPriceFull = fileLinks
-      .filter(l => l.name.includes('PriceFull'))
+    // Filter: Prioritize Store 001 (Main)
+    const targetStoreId = '001';
+
+    let latestPriceFull = fileLinks
+      .filter(l => l.name.includes('PriceFull') && l.name.includes(`-${targetStoreId}-`))
       .sort((a, b) => b.name.localeCompare(a.name))[0];
     
-    const latestPromoFull = fileLinks
-      .filter(l => l.name.includes('PromoFull'))
+    if (!latestPriceFull) {
+        latestPriceFull = fileLinks
+          .filter(l => l.name.includes('PriceFull'))
+          .sort((a, b) => b.name.localeCompare(a.name))[0];
+    }
+    
+    let latestPromoFull = fileLinks
+      .filter(l => l.name.includes('PromoFull') && l.name.includes(`-${targetStoreId}-`))
       .sort((a, b) => b.name.localeCompare(a.name))[0];
+
+    if (!latestPromoFull) {
+        latestPromoFull = fileLinks
+          .filter(l => l.name.includes('PromoFull'))
+          .sort((a, b) => b.name.localeCompare(a.name))[0];
+    }
 
     const filesToProcess = [latestPriceFull, latestPromoFull].filter(f => f);
 
@@ -569,6 +587,11 @@ async function handleRamiLevy(page, supermarket, items, io, onResults, context) 
     }
 
     console.log(`Final Tally for Rami Levy: ${allDiscoveredProducts.length} products, ${allDiscoveredPromos.length} unique items in promos.`);
+
+    if (allDiscoveredProducts.length === 0 && allDiscoveredPromos.length === 0) {
+        throw new Error('Scrape failed: No products or promos found. See server logs.');
+    }
+
     if (onResults) {
         await onResults(supermarket.id, allDiscoveredProducts, allDiscoveredPromos);
     }
@@ -709,6 +732,11 @@ async function handleShufersal(page, supermarket, items, io, onResults) {
     }
 
     console.log(`Final Tally: ${allDiscoveredProducts.length} products, ${allDiscoveredPromos.length} unique items in promos.`);
+
+    if (allDiscoveredProducts.length === 0 && allDiscoveredPromos.length === 0) {
+        throw new Error('Scrape failed: No products or promos found. See server logs.');
+    }
+
     if (onResults) {
         await onResults(supermarket.id, allDiscoveredProducts, allDiscoveredPromos);
     }
