@@ -542,7 +542,7 @@ app.get('/api/comparison', async (req, res) => {
                     GROUP BY si.remote_id
                 `, [showCreditCardPromos, storeId, pinned.remote_id]);
                 
-                if (pinnedItem) return pinnedItem;
+                if (pinnedItem) return { ...pinnedItem, is_pinned: true };
             }
         } catch (e) { console.error("Pin check failed:", e); }
 
@@ -579,7 +579,7 @@ app.get('/api/comparison', async (req, res) => {
                 LIMIT 1
             `, [showCreditCardPromos, storeId, ftsQuery]);
             
-            return match;
+            return match ? { ...match, is_pinned: false } : null;
 
         } catch (err) {
             console.error("FTS Matching failed:", err);
@@ -647,18 +647,13 @@ app.get('/api/shopping-list/matches', async (req, res) => {
 });
 
 app.delete('/api/shopping-list/match', async (req, res) => {
-  const { shoppingListItemId, supermarketId } = req.body;
-  if (!shoppingListItemId || !supermarketId) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
+  const { shoppingListItemId, supermarketId } = req.query; // Use query params for DELETE
+  if (!shoppingListItemId || !supermarketId) return res.status(400).json({ error: 'Missing fields' });
+  
   try {
-    await db.run(`
-      DELETE FROM item_matches 
-      WHERE shopping_list_item_id = ? AND supermarket_id = ?
-    `, [shoppingListItemId, supermarketId]);
+    await db.run('DELETE FROM item_matches WHERE shopping_list_item_id = ? AND supermarket_id = ?', [shoppingListItemId, supermarketId]);
     res.json({ success: true });
   } catch (err) {
-    console.error('Error deleting item match:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

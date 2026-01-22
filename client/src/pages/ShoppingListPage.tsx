@@ -256,11 +256,12 @@ const ShoppingListPage = () => {
   };
 
   const handlePin = async (item: ShoppingListItem, match: SearchResult) => {
-    const isCurrentlyPinned = checkIsPinned(match.supermarket_id, match.remote_id, item.id);
+    // Use is_pinned from the match object or check local state as fallback
+    const isCurrentlyPinned = (match as any).is_pinned ?? checkIsPinned(match.supermarket_id, match.remote_id, item.id);
     try {
         if (isCurrentlyPinned) {
             await axios.delete(`${API_BASE_URL}/api/shopping-list/match`, {
-                data: {
+                params: {
                     shoppingListItemId: item.id,
                     supermarketId: match.supermarket_id
                 }
@@ -458,7 +459,7 @@ const ShoppingListPage = () => {
     if (isOverallCheapest) priceColor = 'success.main';
     else if (isStoreCheapest) priceColor = 'warning.main';
 
-    const isPinned = checkIsPinned(match.supermarket_id, match.remote_id, item.id);
+    const isPinned = (match as any).is_pinned ?? checkIsPinned(match.supermarket_id, match.remote_id, item.id);
     
     return (
         <ListItem key={`${match.supermarket_id}-${match.remote_id}-${item.id}`} disableGutters sx={{ py: 0.5 }}>
