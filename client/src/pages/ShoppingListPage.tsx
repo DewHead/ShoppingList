@@ -49,6 +49,7 @@ interface SearchResult {
   remote_id: string;
   promo_description?: string;
   branch_info?: string;
+  is_pinned?: boolean;
 }
 
 interface PinnedItem {
@@ -255,31 +256,26 @@ const ShoppingListPage = () => {
     setKnownItems(res.data);
   };
 
-  const handlePin = async (item: ShoppingListItem, match: SearchResult) => {
-    // Use is_pinned from the match object or check local state as fallback
-    const isCurrentlyPinned = (match as any).is_pinned ?? checkIsPinned(match.supermarket_id, match.remote_id, item.id);
+  const handlePinItem = async (shoppingListItemId: number, supermarketId: number, remoteId: string, currentIsPinned: boolean) => {
     try {
-        if (isCurrentlyPinned) {
-            await axios.delete(`${API_BASE_URL}/api/shopping-list/match`, {
-                params: {
-                    shoppingListItemId: item.id,
-                    supermarketId: match.supermarket_id
-                }
-            });
-            setNotification("Item unpinned");
-        } else {
-            await axios.put(`${API_BASE_URL}/api/shopping-list/match`, {
-                shoppingListItemId: item.id,
-                supermarketId: match.supermarket_id,
-                remoteId: match.remote_id
-            });
-            setNotification("Item pinned!");
-        }
-        setTimeout(() => setNotification(null), 3000);
-        await Promise.all([fetchPinnedItems(), fetchComparison()]); 
+      if (currentIsPinned) {
+        await axios.delete(`${API_BASE_URL}/api/shopping-list/match`, {
+          params: { shoppingListItemId, supermarketId }
+        });
+        setNotification("Item unpinned");
+      } else {
+        await axios.put(`${API_BASE_URL}/api/shopping-list/match`, {
+          shoppingListItemId,
+          supermarketId,
+          remoteId
+        });
+        setNotification("Item pinned!");
+      }
+      setTimeout(() => setNotification(null), 3000);
+      await Promise.all([fetchPinnedItems(), fetchComparison()]); 
     } catch (err) {
-        console.error(err);
-        setNotification("Error updating pin");
+      console.error('Error updating pin:', err);
+      setNotification("Error updating pin");
     }
   };
 
@@ -335,7 +331,6 @@ const ShoppingListPage = () => {
         setSelectedItemIds(prev => prev.filter(id => id !== item.id));
         return;
       } else {
-        setSelectedItemIds([item.id]); // Actually usually multi-select keeps adding, but user request implies toggle
         setSelectedItemIds(prev => [...prev, item.id]);
       }
     } else {
@@ -459,7 +454,8 @@ const ShoppingListPage = () => {
     if (isOverallCheapest) priceColor = 'success.main';
     else if (isStoreCheapest) priceColor = 'warning.main';
 
-    const isPinned = (match as any).is_pinned ?? checkIsPinned(match.supermarket_id, match.remote_id, item.id);
+    const currentBestMatchForStore = storeResults[match.supermarket_id]?.find((r: any) => String(r.item.id) === String(item.id));
+    const isPinned = !!currentBestMatchForStore?.is_pinned && currentBestMatchForStore?.remote_id === match.remote_id;
     
     return (
         <ListItem key={`${match.supermarket_id}-${match.remote_id}-${item.id}`} disableGutters sx={{ py: 0.5 }}>
@@ -493,7 +489,7 @@ const ShoppingListPage = () => {
             <Box sx={{ textAlign: 'right', ml: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <IconButton 
                     size="small" 
-                    onClick={(e) => { e.stopPropagation(); handlePin(item, match); }}
+                    onClick={(e) => { e.stopPropagation(); handlePinItem(item.id, match.supermarket_id, match.remote_id, isPinned); }}
                     color={isPinned ? "primary" : "default"}
                     sx={{ p: 0.5 }}
                 >

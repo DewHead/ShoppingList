@@ -599,7 +599,8 @@ app.get('/api/comparison', async (req, res) => {
               quantity: item.quantity,
               promo_description: match ? match.promo_description : null,
               remote_id: match ? match.remote_id : null,
-              supermarket_id: store.id
+              supermarket_id: store.id,
+              is_pinned: !!match?.is_pinned
           });
       }
 
