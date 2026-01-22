@@ -590,9 +590,9 @@ app.get('/api/comparison', async (req, res) => {
     for (const store of activeSupermarkets) {
       const results = [];
       for (const item of shoppingList) {
-          const match = await findBestMatchForStore(item.itemName, store.id, showSbox, item.itemId);
+          const match = await findBestMatchForStore(item.itemName, store.id, showSbox, item.listId);
           results.push({
-              item: { itemName: item.itemName, id: item.itemId }, // include ID for frontend usage if needed
+              item: { itemName: item.itemName, id: item.listId }, 
               name: match ? match.remote_name : 'Not Found',
               price: match ? `₪${(match.price * item.quantity).toFixed(2)}` : 'N/A',
               rawPrice: match ? match.price : 0,
@@ -633,6 +633,32 @@ app.put('/api/shopping-list/match', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('Error saving item match:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/shopping-list/matches', async (req, res) => {
+  try {
+    const matches = await db.all('SELECT * FROM item_matches');
+    res.json(matches);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/shopping-list/match', async (req, res) => {
+  const { shoppingListItemId, supermarketId } = req.body;
+  if (!shoppingListItemId || !supermarketId) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  try {
+    await db.run(`
+      DELETE FROM item_matches 
+      WHERE shopping_list_item_id = ? AND supermarket_id = ?
+    `, [shoppingListItemId, supermarketId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting item match:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

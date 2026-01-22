@@ -13,10 +13,11 @@ import {
   useTheme,
   Tooltip,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  Collapse
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { PushPin, PushPinOutlined } from '@mui/icons-material';
+import { PushPin, PushPinOutlined, ExpandMore, ExpandLess } from '@mui/icons-material';
 import { AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -37,6 +38,7 @@ interface ShoppingListItem {
 interface Item {
   id: number;
   name: string;
+  remote_id?: string;
 }
 
 interface SearchResult {
@@ -46,6 +48,13 @@ interface SearchResult {
   price: number;
   remote_id: string;
   promo_description?: string;
+  branch_info?: string;
+}
+
+interface PinnedItem {
+  shopping_list_item_id: number;
+  supermarket_id: number;
+  remote_id: string;
 }
 
 const toHebrew = (str: string) => {
@@ -69,7 +78,6 @@ const calculateBestPrice = (match: SearchResult, quantity: number) => {
   const promoList = match.promo_description.split(' | ');
   
   promoList.forEach(promoDesc => {
-      // Try to parse "Name [Qty] ב ₪[Price]"
       const parts = promoDesc.split(/\s+ב-?\s*₪?/);
       if (parts.length >= 2) {
           const lastPart = parts[parts.length - 1];
@@ -81,7 +89,6 @@ const calculateBestPrice = (match: SearchResult, quantity: number) => {
               const qtyMatch = namePart.match(/\s(\d+)$/);
               
               let currentTotal = originalTotal;
-              let isPromoApplied = false;
 
               if (qtyMatch && parseInt(qtyMatch[1]) > 1) {
                   const requiredQty = parseInt(qtyMatch[1]);
@@ -90,7 +97,6 @@ const calculateBestPrice = (match: SearchResult, quantity: number) => {
                       const promoGroups = Math.floor(quantity / requiredQty);
                       const remaining = quantity % requiredQty;
                       currentTotal = (promoGroups * promoPrice) + (remaining * unitPrice);
-                      isPromoApplied = true;
                       
                       if (currentTotal < bestResult.total) {
                           bestResult = { 
@@ -123,43 +129,6 @@ const ShoppingListPage = () => {
   const theme = useTheme();
   const { t } = useTranslation();
   
-  const getPromoMessage = (promo: string, currentQty: number) => {
-    if (!promo) return null;
-    
-    const promos = promo.split(' | ');
-    if (promos.length <= 1) {
-        return parseSinglePromo(promo, currentQty);
-    }
-
-    return (
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            {promos.map((p, i) => (
-                <Box key={i} sx={{ 
-                    borderBottom: i < promos.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none', 
-                    py: 0.5 
-                }}>
-                    {parseSinglePromo(p, currentQty)}
-                </Box>
-            ))}
-        </Box>
-    );
-  };
-
-  const parseSinglePromo = (p: string, currentQty: number) => {
-    // Pattern for "X ב-Y" (e.g. 3 ב-₪10.00)
-    const countPattern = /^(\d+)\s+ב-?\s*₪?([\d.]+)/;
-    const match = p.match(countPattern);
-    
-    if (match) {
-        const requiredQty = parseInt(match[1]);
-        const price = match[2];
-        if (currentQty < requiredQty) {
-            const needed = requiredQty - currentQty;
-            return `Add ${needed} more to get ${requiredQty} for ₪${price}`;
-        }
-    }
-    return p;
-  };
   const [items, setItems] = useState<ShoppingListItem[]>([]);
   const [newItemName, setNewItemName] = useState('');
   const [newItemQuantity, setNewItemQuantity] = useState(1);
@@ -175,8 +144,34 @@ const ShoppingListPage = () => {
 
   const [itemMatches, setItemMatches] = useState<Record<number, Record<string, SearchResult[]>>>({});
   const [loadingMatches, setLoadingMatches] = useState(false);
+  const [expandedStores, setExpandedStores] = useState<string[]>([]);
+  const [pinnedItems, setPinnedItems] = useState<PinnedItem[]>([]);
 
-  // Determine min total price across all matches PER ITEM to highlight green
+  const toggleStore = (storeName: string) => {
+    setExpandedStores(prev => 
+      prev.includes(storeName) 
+        ? prev.filter(s => s !== storeName) 
+        : [...prev, storeName]
+    );
+  };
+
+  const toggleAllStores = () => {
+    const allStoreNames = Object.keys(groupedMatchesByStore);
+    if (expandedStores.length === allStoreNames.length) {
+      setExpandedStores([]);
+    } else {
+      setExpandedStores(allStoreNames);
+    }
+  };
+
+  const checkIsPinned = (supermarketId: number, remoteId: string, listItemId: number) => {
+    return pinnedItems.some(p => 
+        String(p.supermarket_id) === String(supermarketId) && 
+        String(p.remote_id) === String(remoteId) && 
+        String(p.shopping_list_item_id) === String(listItemId)
+    );
+  };
+
   const minTotalsPerItem = useMemo(() => {
       const mins: Record<number, number> = {};
       Object.entries(itemMatches).forEach(([itemIdStr, storeMatches]) => {
@@ -199,6 +194,7 @@ const ShoppingListPage = () => {
     fetchKnownItems();
     fetchSupermarkets();
     fetchComparison();
+    fetchPinnedItems();
 
     socket.on('results', (data) => {
       setStoreResults(prev => ({ ...prev, [data.storeId]: data.results }));
@@ -230,7 +226,6 @@ const ShoppingListPage = () => {
   const fetchComparison = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/comparison`);
-      // API returns { storeId: { results: [...], coupons: [] } }
       const formatted: Record<number, any[]> = {};
       Object.entries(res.data).forEach(([id, data]: [string, any]) => {
         formatted[Number(id)] = data.results;
@@ -241,6 +236,14 @@ const ShoppingListPage = () => {
     }
   };
 
+  const fetchPinnedItems = async () => {
+    try {
+        const res = await axios.get(`${API_BASE_URL}/api/shopping-list/matches`);
+        setPinnedItems(res.data);
+    } catch (err) {
+        console.error('Error fetching pinned items:', err);
+    }
+  };
 
   const fetchList = async () => {
     const res = await axios.get(`${API_BASE_URL}/api/shopping-list`);
@@ -253,61 +256,56 @@ const ShoppingListPage = () => {
   };
 
   const handlePin = async (item: ShoppingListItem, match: SearchResult) => {
+    const isCurrentlyPinned = checkIsPinned(match.supermarket_id, match.remote_id, item.id);
     try {
-        await axios.put(`${API_BASE_URL}/api/shopping-list/match`, {
-            shoppingListItemId: item.id,
-            supermarketId: match.supermarket_id,
-            remoteId: match.remote_id
-        });
-        setNotification("Item pinned!");
+        if (isCurrentlyPinned) {
+            await axios.delete(`${API_BASE_URL}/api/shopping-list/match`, {
+                data: {
+                    shoppingListItemId: item.id,
+                    supermarketId: match.supermarket_id
+                }
+            });
+            setNotification("Item unpinned");
+        } else {
+            await axios.put(`${API_BASE_URL}/api/shopping-list/match`, {
+                shoppingListItemId: item.id,
+                supermarketId: match.supermarket_id,
+                remoteId: match.remote_id
+            });
+            setNotification("Item pinned!");
+        }
         setTimeout(() => setNotification(null), 3000);
-        fetchComparison(); 
+        await Promise.all([fetchPinnedItems(), fetchComparison()]); 
     } catch (err) {
         console.error(err);
-        setNotification("Error pinning item");
+        setNotification("Error updating pin");
     }
   };
 
   const addItem = async () => {
     if (!newItemName) return;
-    
     let itemName = newItemName;
     const hebrewConverted = toHebrew(itemName);
-    
-    // If the converted version is different and contains Hebrew characters, use it.
-    // We check if it has Hebrew letters (range \u0590-\u05FF)
     if (hebrewConverted !== itemName && /[\u0590-\u05FF]/.test(hebrewConverted)) {
         itemName = hebrewConverted;
     }
-
     const existingItem = items.find(item => item.itemName.toLowerCase() === itemName.toLowerCase());
-
     if (existingItem) {
       const newQuantity = existingItem.quantity + newItemQuantity;
       await updateItemQuantity(existingItem.id, newQuantity);
       setNotification(t('itemUpdated', { itemName }));
       setTimeout(() => setNotification(null), 5000);
     } else {
-      const res = await axios.post(`${API_BASE_URL}/api/shopping-list`, { 
-        itemName: itemName, 
-        quantity: newItemQuantity 
-      });
-      
-      // Fetch updated list and select the new item
+      await axios.post(`${API_BASE_URL}/api/shopping-list`, { itemName: itemName, quantity: newItemQuantity });
       const listRes = await axios.get(`${API_BASE_URL}/api/shopping-list`);
       const updatedList = listRes.data;
       setItems(updatedList);
       fetchKnownItems();
-
-      // The item we just added should be the last one in the list (or we can find it by ID if the server returns it)
-      // Looking at server/index.js, the post to /api/shopping-list returns { success: true }. 
-      // We'll find the highest ID in the updated list.
       if (updatedList.length > 0) {
           const newItem = updatedList.reduce((prev: any, current: any) => (prev.id > current.id) ? prev : current);
           handleItemClick(newItem);
       }
     }
-    
     setNewItemName('');
     setNewItemQuantity(1);
   };
@@ -336,31 +334,27 @@ const ShoppingListPage = () => {
         setSelectedItemIds(prev => prev.filter(id => id !== item.id));
         return;
       } else {
+        setSelectedItemIds([item.id]); // Actually usually multi-select keeps adding, but user request implies toggle
         setSelectedItemIds(prev => [...prev, item.id]);
       }
     } else {
       setSelectedItemIds([item.id]);
-      setItemMatches({}); // Clear others in single mode
+      setItemMatches({}); 
     }
 
     setLoadingMatches(true);
     try {
         const res = await axios.post(`${API_BASE_URL}/api/search-all-products`, { query: item.itemName });
-        
-        // Sort results by total price (considering quantity and promos)
         const sortedResults = [...res.data].sort((a: SearchResult, b: SearchResult) => {
             const totalA = calculateBestPrice(a, item.quantity).total;
             const totalB = calculateBestPrice(b, item.quantity).total;
             return totalA - totalB;
         });
-
-        // Group by supermarket name
         const grouped: Record<string, SearchResult[]> = {};
         sortedResults.forEach((r: SearchResult) => {
             if (!grouped[r.supermarket_name]) grouped[r.supermarket_name] = [];
             grouped[r.supermarket_name].push(r);
         });
-        
         setItemMatches(prev => ({ ...prev, [item.id]: grouped }));
     } catch (err) {
         console.error(err);
@@ -371,14 +365,12 @@ const ShoppingListPage = () => {
 
   const autocompleteOptions = useMemo(() => {
     const suggestions = new Set<string>();
-
     Object.values(storeResults).forEach(results => {
       results.forEach(r => {
         suggestions.add(r.item.itemName);
         suggestions.add(r.name);
       });
     });
-
     return Array.from(suggestions);
   }, [storeResults]);
 
@@ -390,60 +382,37 @@ const ShoppingListPage = () => {
     Object.keys(storeResults).forEach(storeId => {
       const results = storeResults[Number(storeId)];
       if (!results || results.length === 0) return;
-
       let currentTotal = 0;
       let missingCount = 0;
-
       results.forEach((r: any) => {
         let itemPrice = 0;
         let isMissing = false;
-
-        // Check if price is valid (not 'N/A', 'NA', or 0)
-        // r.price comes from server as string "₪12.90" or "N/A"
-        // r.rawPrice is the numeric unit price
         const priceStr = String(r.price);
         if (priceStr === 'N/A' || priceStr === 'NA' || r.rawPrice === 0) {
             isMissing = true;
         } else {
             const priceVal = parseFloat(priceStr.replace(/[^\d.]/g, ''));
-            if (isNaN(priceVal) || priceVal === 0) {
-                isMissing = true;
-            } else {
-                itemPrice = priceVal;
-            }
+            if (isNaN(priceVal) || priceVal === 0) isMissing = true;
+            else itemPrice = priceVal;
         }
-
         if (isMissing) {
             missingCount++;
             itemPrice = PENALTY_PRICE * (r.quantity || 1);
         }
-
         currentTotal += itemPrice;
       });
-
-      // Ignore store if more than 40% items are missing
-      if (results.length > 0 && (missingCount / results.length) > 0.40) {
-          return;
-      }
-
+      if (results.length > 0 && (missingCount / results.length) > 0.40) return;
       if (currentTotal < lowestTotal) {
         lowestTotal = currentTotal;
         const supermarket = supermarkets.find(s => s.id === Number(storeId));
-        cheapest = {
-          ...supermarket,
-          total: lowestTotal.toFixed(2),
-          results,
-          missing: missingCount
-        };
+        cheapest = { ...supermarket, total: lowestTotal.toFixed(2), results, missing: missingCount };
       }
     });
-
     return cheapest;
   }, [storeResults, supermarkets]);
 
   const groupedMatchesByStore = useMemo(() => {
     const stores: Record<string, { item: ShoppingListItem, matches: SearchResult[] }[]> = {};
-    
     selectedItems.forEach(item => {
       const storeMatches = itemMatches[item.id] || {};
       Object.entries(storeMatches).forEach(([storeName, matches]) => {
@@ -451,23 +420,106 @@ const ShoppingListPage = () => {
         stores[storeName].push({ item, matches });
       });
     });
-    
     return stores;
   }, [selectedItems, itemMatches]);
+
+  const getPromoMessage = (promo: string, currentQty: number) => {
+    if (!promo) return null;
+    const promos = promo.split(' | ');
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            {promos.map((p, i) => {
+                const countPattern = /^(\d+)\s+ב-?\s*₪?([\d.]+)/;
+                const match = p.match(countPattern);
+                let message = p;
+                if (match) {
+                    const requiredQty = parseInt(match[1]);
+                    const price = match[2];
+                    if (currentQty < requiredQty) {
+                        message = `Add ${requiredQty - currentQty} more to get ${requiredQty} for ₪${price}`;
+                    }
+                }
+                return (
+                    <Box key={i} sx={{ borderBottom: i < promos.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none', py: 0.5 }}>
+                        {message}
+                    </Box>
+                );
+            })}
+        </Box>
+    );
+  };
+
+  const renderMatchItem = (match: SearchResult, item: ShoppingListItem, minTotal: number, isTopMatch: boolean) => {
+    const { total, isPromo, originalTotal, displayName } = calculateBestPrice(match, item.quantity);
+    const isOverallCheapest = Math.abs(total - minTotal) < 0.01;
+    const isStoreCheapest = isTopMatch && !isOverallCheapest;
+    
+    let priceColor = 'error.main'; 
+    if (isOverallCheapest) priceColor = 'success.main';
+    else if (isStoreCheapest) priceColor = 'warning.main';
+
+    const isPinned = checkIsPinned(match.supermarket_id, match.remote_id, item.id);
+    
+    return (
+        <ListItem key={`${match.supermarket_id}-${match.remote_id}-${item.id}`} disableGutters sx={{ py: 0.5 }}>
+            <ListItemText 
+                primary={
+                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2, fontSize: '1.1rem' }}>
+                                {displayName}
+                            </Typography>
+                            {match.promo_description && (() => {
+                                const isSbox = match.promo_description.includes('SBOX');
+                                if (!isSbox) return true;
+                                const storeSetting = localStorage.getItem(`showCreditCardPromos_${match.supermarket_id}`);
+                                return storeSetting ? JSON.parse(storeSetting) : false;
+                            })() && (
+                                <Tooltip title={getPromoMessage(match.promo_description, item.quantity)} arrow placement="top">
+                                    <Box sx={{ display: 'inline-flex', color: 'primary.main', cursor: 'help' }}><AlertCircle size={18} /></Box>
+                                </Tooltip>
+                            )}
+                        </Box>
+                        {displayName !== match.remote_name && (
+                            <Typography variant="caption" sx={{ opacity: 0.7, fontSize: '0.95rem', lineHeight: 1.1 }}>
+                                {match.remote_name}
+                            </Typography>
+                        )}
+                    </Box>
+                } 
+                primaryTypographyProps={{ component: 'div' }}
+            />
+            <Box sx={{ textAlign: 'right', ml: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <IconButton 
+                    size="small" 
+                    onClick={(e) => { e.stopPropagation(); handlePin(item, match); }}
+                    color={isPinned ? "primary" : "default"}
+                    sx={{ p: 0.5 }}
+                >
+                    {isPinned ? <PushPin fontSize="small" /> : <PushPinOutlined fontSize="small" />}
+                </IconButton>
+                <Typography variant="caption" sx={{ color: 'text.secondary', whiteSpace: 'nowrap', fontSize: '0.95rem' }}>
+                    ₪{match.price.toFixed(2)}
+                </Typography>
+                <Box sx={{ minWidth: '75px' }}>
+                    {isPromo && (
+                        <Typography variant="caption" sx={{ textDecoration: 'line-through', color: 'text.secondary', display: 'block', fontSize: '0.95rem', lineHeight: 1 }}>
+                            ₪{originalTotal.toFixed(2)}
+                        </Typography>
+                    )}
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: priceColor, fontSize: '1.25rem' }}>
+                        ₪{total.toFixed(2)}
+                    </Typography>
+                </Box>
+            </Box>
+        </ListItem>
+    );
+  };
 
   const hasSidePanel = !!cheapestStore || selectedItemIds.length > 0;
 
   return (
-    <Box sx={hasSidePanel ? {
-      display: 'grid',
-      gridTemplateColumns: { md: '400px 320px' },
-      gap: 12,
-      justifyContent: 'center',
-      mx: 'auto'
-    } : {
-      maxWidth: '600px',
-      mx: 'auto'
-    }}>
+    <Box sx={hasSidePanel ? { display: 'grid', gridTemplateColumns: { md: '400px 320px' }, gap: 12, justifyContent: 'center', mx: 'auto' } : { maxWidth: '600px', mx: 'auto' }}>
       <Box>
         <Box sx={{ mb: 4 }}>
           <Typography variant="h4" sx={{ mb: 1, fontSize: '2.5rem' }}>{t('myList')}</Typography>
@@ -480,70 +532,18 @@ const ShoppingListPage = () => {
             options={autocompleteOptions}
             sx={{ flexGrow: 1 }}
             value={newItemName}
-            onInputChange={(_, newInputValue) => {
-              setNewItemName(newInputValue);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                addItem();
-              }
-            }}
-            renderInput={(params) => (
-              <TextField 
-                {...params} 
-                placeholder={t('addItemPlaceholder')}
-                variant="outlined" 
-                size="small"
-                inputProps={{ ...params.inputProps, style: { fontSize: '1.2rem' } }}
-              />
-            )}
+            onInputChange={(_, newInputValue) => setNewItemName(newInputValue)}
+            onKeyDown={(e) => e.key === 'Enter' && addItem()}
+            renderInput={(params) => <TextField {...params} placeholder={t('addItemPlaceholder')} variant="outlined" size="small" inputProps={{ ...params.inputProps, style: { fontSize: '1.2rem' } }} />}
           />
-          <TextField
-            type="number"
-            value={newItemQuantity}
-            onChange={(e) => setNewItemQuantity(Number(e.target.value))}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                addItem();
-              }
-            }}
-            sx={{ width: '80px' }}
-            size="small"
-            inputProps={{ min: 1, style: { fontSize: '1.2rem' } }}
-          />
-          <Button 
-            variant="contained" 
-            onClick={addItem} 
-            sx={{ py: 1.2, px: 4, fontSize: '1.2rem' }}
-          >
-            {t('add')}
-          </Button>
+          <TextField type="number" value={newItemQuantity} onChange={(e) => setNewItemQuantity(Number(e.target.value))} onKeyDown={(e) => e.key === 'Enter' && addItem()} sx={{ width: '80px' }} size="small" inputProps={{ min: 1, style: { fontSize: '1.2rem' } }} />
+          <Button variant="contained" onClick={addItem} sx={{ py: 1.2, px: 4, fontSize: '1.2rem' }}>{t('add')}</Button>
         </Paper>
 
         {notification && (
-          <Box sx={{
-            position: 'fixed',
-            top: '80px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            color: 'white',
-            padding: '10px 20px',
-            borderRadius: '8px',
-            zIndex: 1500, // Increased zIndex
-            animation: 'fadeInOut 5s forwards',
-            overflow: 'hidden', // To contain the countdown bar
-          }}>
+          <Box sx={{ position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'rgba(0, 0, 0, 0.8)', color: 'white', padding: '10px 20px', borderRadius: '8px', zIndex: 1500, animation: 'fadeInOut 5s forwards', overflow: 'hidden' }}>
             {notification}
-            <Box sx={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              width: '100%',
-              height: '4px',
-              backgroundColor: 'rgba(255, 255, 255, 0.5)',
-              animation: 'countdown 5s linear forwards',
-            }}/>
+            <Box sx={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '4px', backgroundColor: 'rgba(255, 255, 255, 0.5)', animation: 'countdown 5s linear forwards' }}/>
           </Box>
         )}
 
@@ -551,234 +551,74 @@ const ShoppingListPage = () => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6" sx={{ m: 0, fontSize: '1.6rem' }}>{t('itemsInCart')}</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {isMultiSelect && (
-                    <Button 
-                        size="small" 
-                        variant="text" 
-                        onClick={async () => {
-                            const newIds = items.map(i => i.id);
-                            setSelectedItemIds(newIds);
-                            // Fetch matches for all items that don't have them yet
-                            for (const item of items) {
-                                if (!itemMatches[item.id]) {
-                                    handleItemClick(item);
-                                }
-                            }
-                        }}
-                        sx={{ fontSize: '1rem', py: 0 }}
-                    >
-                        Select All
-                    </Button>
-                )}
-                <FormControlLabel
-                control={
-                    <Switch 
-                    size="small" 
-                    checked={isMultiSelect} 
-                    onChange={(e) => {
-                        setIsMultiSelect(e.target.checked);
-                        if (!e.target.checked) {
-                        setSelectedItemIds([]);
-                        setItemMatches({});
-                        }
-                    }} 
-                    />
-                }
-                label={<Typography variant="caption" sx={{ fontSize: '1rem' }}>Multi-Select</Typography>}
-                />
+                {isMultiSelect && <Button size="small" variant="text" onClick={() => { setSelectedItemIds(items.map(i => i.id)); items.forEach(i => !itemMatches[i.id] && handleItemClick(i)); }} sx={{ fontSize: '1rem', py: 0 }}>Select All</Button>}
+                <FormControlLabel control={<Switch size="small" checked={isMultiSelect} onChange={(e) => { setIsMultiSelect(e.target.checked); if (!e.target.checked) { setSelectedItemIds([]); setItemMatches({}); } }} />} label={<Typography variant="caption" sx={{ fontSize: '1rem' }}>Multi-Select</Typography>} />
             </Box>
           </Box>
           <Paper elevation={0}>
             <List sx={{ p: 0 }} dense>
               {items.map((item, index) => (
-                <ListItem
-                  key={item.id}
-                  divider={index < items.length - 1}
-                  selected={selectedItemIds.includes(item.id)}
-                  onClick={() => handleItemClick(item)}
-                  sx={{ 
-                      px: 2,
-                      py: 1, 
-                      bgcolor: selectedItemIds.includes(item.id)
-                        ? (theme.palette.mode === 'dark' ? 'rgba(90, 90, 90, 0.5)' : 'rgba(103, 58, 183, 0.25)')
-                        : (theme.palette.mode === 'dark' ? 'rgba(40, 40, 40, 0.7)' : 'rgba(103, 58, 183, 0.15)'),
-                      cursor: 'pointer',
-                      transition: 'background-color 0.2s',
-                      display: 'flex',
-                      alignItems: 'center',
-                      '&:hover': {
-                           bgcolor: theme.palette.mode === 'dark' ? 'rgba(60, 60, 60, 0.7)' : 'rgba(103, 58, 183, 0.2)' 
-                      }
-                  }}
-                >
-                  <ListItemText 
-                    primary={item.itemName} 
-                    primaryTypographyProps={{ fontWeight: 600, fontSize: '1.3rem' }}
-                    sx={{ m: 0 }}
-                  />
+                <ListItem key={item.id} divider={index < items.length - 1} selected={selectedItemIds.includes(item.id)} onClick={() => handleItemClick(item)} sx={{ px: 2, py: 1, bgcolor: selectedItemIds.includes(item.id) ? (theme.palette.mode === 'dark' ? 'rgba(90, 90, 90, 0.5)' : 'rgba(103, 58, 183, 0.25)') : (theme.palette.mode === 'dark' ? 'rgba(40, 40, 40, 0.7)' : 'rgba(103, 58, 183, 0.15)'), cursor: 'pointer', transition: 'background-color 0.2s', '&:hover': { bgcolor: theme.palette.mode === 'dark' ? 'rgba(60, 60, 60, 0.7)' : 'rgba(103, 58, 183, 0.2)' } }}>
+                  <ListItemText primary={item.itemName} primaryTypographyProps={{ fontWeight: 600, fontSize: '1.3rem' }} sx={{ m: 0 }} />
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
-                    <TextField
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => updateItemQuantity(item.id, Number(e.target.value))}
-                      onClick={(e) => e.stopPropagation()}
-                      sx={{ width: '60px' }}
-                      size="small"
-                      inputProps={{ 
-                        min: 1,
-                        style: { padding: '4px 6px', fontSize: '1.2rem', textAlign: 'center' }
-                      }}
-                    />
-                    <IconButton 
-                      size="small" 
-                      onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} 
-                      sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' }}}
-                    >
-                      <DeleteIcon sx={{ fontSize: '1.6rem' }} />
-                    </IconButton>
+                    <TextField type="number" value={item.quantity} onChange={(e) => updateItemQuantity(item.id, Number(e.target.value))} onClick={(e) => e.stopPropagation()} sx={{ width: '60px' }} size="small" inputProps={{ min: 1, style: { padding: '4px 6px', fontSize: '1.2rem', textAlign: 'center' } }} />
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' }}}><DeleteIcon sx={{ fontSize: '1.6rem' }} /></IconButton>
                   </Box>
                 </ListItem>
               ))}
-              {items.length === 0 && (
-                <Box sx={{ p: 4, textAlign: 'center' }}>
-                  <Typography color="text.secondary">{t('emptyList')}</Typography>
-                </Box>
-              )}
+              {items.length === 0 && <Box sx={{ p: 4, textAlign: 'center' }}><Typography color="text.secondary">{t('emptyList')}</Typography></Box>}
             </List>
           </Paper>
         </Box>
       </Box>
 
-      {/* Side Panel */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {selectedItemIds.length > 0 && (
             <Paper elevation={0} sx={{ p: 2, bgcolor: theme.palette.background.paper, border: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="h6" sx={{ fontSize: '1.4rem', fontWeight: 600 }}>
-                        {selectedItems.length === 1 
-                            ? `${t('matchesFor') || 'Matches for'} "${selectedItems[0].itemName}"`
-                            : `${t('matchesFor') || 'Matches for'} ${selectedItems.length} items`}
+                        {selectedItems.length === 1 ? `${t('matchesFor') || 'Matches for'} "${selectedItems[0].itemName}"` : `${t('matchesFor') || 'Matches for'} ${selectedItems.length} items`}
                     </Typography>
-                    <IconButton size="small" onClick={() => { setSelectedItemIds([]); setItemMatches({}); }}>
-                       <DeleteIcon sx={{ fontSize: '1.4rem' }} />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button size="small" onClick={toggleAllStores} sx={{ minWidth: 'auto', px: 1 }}>{expandedStores.length === Object.keys(groupedMatchesByStore).length ? <ExpandLess /> : <ExpandMore />}</Button>
+                        <IconButton size="small" onClick={() => { setSelectedItemIds([]); setItemMatches({}); }}><DeleteIcon sx={{ fontSize: '1.4rem' }} /></IconButton>
+                    </Box>
                 </Box>
-
-                {loadingMatches ? (
-                   <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.1rem' }}>Loading...</Typography> 
-                ) : Object.keys(groupedMatchesByStore).length === 0 ? (
-                   <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.1rem' }}>No matches found.</Typography>
-                ) : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        {Object.entries(groupedMatchesByStore).map(([storeName, itemsWithMatches]) => (
-                            <Box key={storeName}>
-                                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 700, fontSize: '1.2rem' }}>
-                                    {storeName}
-                                </Typography>
-                                {itemsWithMatches.map(({ item, matches }) => {
-                                    const minTotal = minTotalsPerItem[item.id];
-                                    return (
-                                        <Box key={item.id} sx={{ mb: itemsWithMatches.length > 1 ? 2 : 0, pl: itemsWithMatches.length > 1 ? 1 : 0, borderLeft: itemsWithMatches.length > 1 ? '2px solid rgba(103, 58, 183, 0.2)' : 'none' }}>
-                                            {selectedItems.length > 1 && (
-                                                <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8, color: 'primary.main', fontSize: '1.05rem' }}>
-                                                    {item.itemName} ({item.quantity})
-                                                </Typography>
-                                            )}
+                {loadingMatches ? <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.1rem' }}>Loading...</Typography> : Object.keys(groupedMatchesByStore).length === 0 ? <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.1rem' }}>No matches found.</Typography> : (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {Object.entries(groupedMatchesByStore).map(([storeName, itemsWithMatches]) => {
+                            const isExpanded = expandedStores.includes(storeName);
+                            return (
+                                <Box key={storeName} sx={{ borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
+                                    <Box onClick={() => toggleStore(storeName)} sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', mb: 1, '&:hover': { opacity: 0.8 } }}>
+                                        <IconButton size="small" sx={{ p: 0, mr: 1 }}>{isExpanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}</IconButton>
+                                        <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 700, fontSize: '1.2rem', flexGrow: 1 }}>{storeName}</Typography>
+                                    </Box>
+                                    {!isExpanded && (
+                                        <Box sx={{ pl: 1 }}>
                                             <List dense disablePadding>
-                                                {(selectedItems.length > 1 ? matches.slice(0, 1) : matches).map((match, idx) => {
-                                                    const { total, isPromo, originalTotal, displayName } = calculateBestPrice(match, item.quantity);
-                                                    const isOverallCheapest = Math.abs(total - minTotal) < 0.01;
-                                                    const isStoreCheapest = idx === 0 && !isOverallCheapest;
-                                                    
-                                                    let priceColor = 'error.main'; // Default red
-                                                    if (isOverallCheapest) priceColor = 'success.main';
-                                                    else if (isStoreCheapest) priceColor = 'warning.main';
-
-                                                    const isPinned = storeResults[match.supermarket_id]?.find((r: any) => r.item.id === item.id)?.remote_id === match.remote_id;
-                                                    
-                                                    return (
-                                                        <ListItem key={match.remote_id} disableGutters sx={{ py: 0.5 }}>
-                                                            <ListItemText 
-                                                                primary={
-                                                                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2, fontSize: '1.1rem' }}>
-                                                                                {displayName}
-                                                                            </Typography>
-                                                                            {match.promo_description && (() => {
-                                                                                const isSbox = match.promo_description.includes('SBOX');
-                                                                                if (!isSbox) return true;
-                                                                                const storeSetting = localStorage.getItem(`showCreditCardPromos_${match.supermarket_id}`);
-                                                                                return storeSetting ? JSON.parse(storeSetting) : false;
-                                                                            })() && (
-                                                                                <Tooltip 
-                                                                                    title={getPromoMessage(match.promo_description, item.quantity)} 
-                                                                                    arrow 
-                                                                                    placement="top"
-                                                                                >
-                                                                                    <Box sx={{ display: 'inline-flex', color: 'primary.main', cursor: 'help' }}>
-                                                                                        <AlertCircle size={18} />
-                                                                                    </Box>
-                                                                                </Tooltip>
-                                                                            )}
-                                                                        </Box>
-                                                                        {displayName !== match.remote_name && (
-                                                                            <Typography variant="caption" sx={{ opacity: 0.7, fontSize: '0.95rem', lineHeight: 1.1 }}>
-                                                                                {match.remote_name}
-                                                                            </Typography>
-                                                                        )}
-                                                                    </Box>
-                                                                } 
-                                                                primaryTypographyProps={{ component: 'div' }}
-                                                            />
-                                                            <Box sx={{ textAlign: 'right', ml: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                                <IconButton 
-                                                                    size="small" 
-                                                                    onClick={(e) => { e.stopPropagation(); handlePin(item, match); }}
-                                                                    color={isPinned ? "primary" : "default"}
-                                                                    sx={{ p: 0.5 }}
-                                                                >
-                                                                    {isPinned ? <PushPin fontSize="small" /> : <PushPinOutlined fontSize="small" />}
-                                                                </IconButton>
-                                                                <Typography variant="caption" sx={{ color: 'text.secondary', whiteSpace: 'nowrap', fontSize: '0.95rem' }}>
-                                                                    ₪{match.price.toFixed(2)}
-                                                                </Typography>
-                                                                <Box sx={{ minWidth: '75px' }}>
-                                                                    {isPromo && (
-                                                                        <Typography 
-                                                                            variant="caption" 
-                                                                            sx={{ 
-                                                                                textDecoration: 'line-through', 
-                                                                                color: 'text.secondary',
-                                                                                display: 'block',
-                                                                                fontSize: '0.95rem',
-                                                                                lineHeight: 1
-                                                                            }}
-                                                                        >
-                                                                            ₪{originalTotal.toFixed(2)}
-                                                                        </Typography>
-                                                                    )}
-                                                                    <Typography 
-                                                                        variant="body2" 
-                                                                        sx={{ 
-                                                                            fontWeight: 700, 
-                                                                            color: priceColor,
-                                                                            fontSize: '1.25rem'
-                                                                        }}
-                                                                    >
-                                                                        ₪{total.toFixed(2)}
-                                                                    </Typography>
-                                                                </Box>
-                                                            </Box>
-                                                        </ListItem>
-                                                    );
+                                                {itemsWithMatches.map(({ item, matches }) => {
+                                                    const bestMatch = matches[0];
+                                                    return bestMatch ? renderMatchItem(bestMatch, item, minTotalsPerItem[item.id], true) : null;
                                                 })}
                                             </List>
                                         </Box>
-                                    );
-                                })}
-                            </Box>
-                        ))}
+                                    )}
+                                    <Collapse in={isExpanded} timeout="auto">
+                                        <Box sx={{ pl: 1 }}>
+                                            {itemsWithMatches.map(({ item, matches }) => (
+                                                <Box key={item.id} sx={{ mb: itemsWithMatches.length > 1 ? 2 : 0, pl: itemsWithMatches.length > 1 ? 1 : 0, borderLeft: itemsWithMatches.length > 1 ? '2px solid rgba(103, 58, 183, 0.2)' : 'none' }}>
+                                                    {selectedItems.length > 1 && <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8, color: 'primary.main', fontSize: '1.05rem' }}>{item.itemName} ({item.quantity})</Typography>}
+                                                    <List dense disablePadding>
+                                                        {(selectedItems.length > 1 ? matches.slice(0, 1) : matches).map((match, idx) => renderMatchItem(match, item, minTotalsPerItem[item.id], idx === 0))}
+                                                    </List>
+                                                </Box>
+                                            ))}
+                                        </Box>
+                                    </Collapse>
+                                </Box>
+                            );
+                        })}
                     </Box>
                 )}
             </Paper>
@@ -790,38 +630,14 @@ const ShoppingListPage = () => {
               <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <Box>
                   <Typography variant="h5" sx={{ fontSize: '1.5rem', fontWeight: 700 }}>{cheapestStore.name}</Typography>
-                  {cheapestStore.missing > 0 && (
-                    <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>
-                      * {cheapestStore.missing} items missing (estimated)
-                    </Typography>
-                  )}
+                  {cheapestStore.missing > 0 && <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>* {cheapestStore.missing} items missing (estimated)</Typography>}
                 </Box>
-                <Typography variant="h4" color="secondary.main" sx={{ fontWeight: 800, fontSize: '2rem' }}>
-                  ₪{cheapestStore.total}
-                </Typography>
+                <Typography variant="h4" color="secondary.main" sx={{ fontWeight: 800, fontSize: '2rem' }}>₪{cheapestStore.total}</Typography>
               </Box>
               <List sx={{ p: 0 }}>
                 {cheapestStore.results.map((r: any, i: number) => (
                   <ListItem key={i} sx={{ px: 0, py: 1 }} divider={i < cheapestStore.results.length - 1}>
-                    <ListItemText 
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Typography sx={{ fontSize: '1.1rem', fontWeight: 600 }}>{r.item.itemName}</Typography>
-                          {r.saleDetails && (
-                            <span className="sale-indicator" onClick={() => setActiveSale(activeSale === i ? null : i)}>
-                              <span className="exclamation-mark">!</span>
-                              {activeSale === i && (
-                                <div className="sale-popup">
-                                  {r.saleDetails}
-                                </div>
-                              )}
-                            </span>
-                          )}
-                        </Box>
-                      } 
-                      secondary={r.name}
-                      secondaryTypographyProps={{ noWrap: true, variant: 'caption', sx: { fontSize: '0.9rem' } }}
-                    />
+                    <ListItemText primary={<Box sx={{ display: 'flex', alignItems: 'center' }}><Typography sx={{ fontSize: '1.1rem', fontWeight: 600 }}>{r.item.itemName}</Typography>{r.saleDetails && <span className="sale-indicator" onClick={() => setActiveSale(activeSale === i ? null : i)}><span className="exclamation-mark">!</span>{activeSale === i && <div className="sale-popup">{r.saleDetails}</div>}</span>}</Box>} secondary={r.name} secondaryTypographyProps={{ noWrap: true, variant: 'caption', sx: { fontSize: '0.9rem' } }} />
                     <Typography variant="body1" sx={{ fontWeight: 700, ml: 2, textAlign: 'right', fontSize: '1.1rem' }}>{r.price}</Typography>
                   </ListItem>
                 ))}
@@ -832,6 +648,5 @@ const ShoppingListPage = () => {
     </Box>
   );
 };
-
 
 export default ShoppingListPage;

@@ -285,7 +285,7 @@ export const ScrapedDataPage: React.FC = () => {
                 control={<Switch checked={showOnlyPromos} onChange={(e) => setShowOnlyPromos(e.target.checked)} size="small" />}
                 label={<Typography variant="body2">{t('showOnlyPromos')}</Typography>}
             />
-            {!storeName.includes('רמי לוי') && !storeName.includes('Rami Levy') && (
+            {(storeName.includes('שופרסל') || storeName.includes('Shufersal')) && (
             <FormControlLabel
                 control={
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>

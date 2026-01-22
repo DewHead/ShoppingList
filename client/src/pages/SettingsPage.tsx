@@ -188,9 +188,9 @@ const SettingsPage = () => {
                                 <IconButton
                                     onClick={() => handleScrapeStore(s.id)}
                                     color="primary"
-                                    disabled={!s.is_active || !!scrapingStates[s.id]}
+                                    disabled={!s.is_active || (!!scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' && !scrapingStates[s.id].startsWith('Error'))}
                                 >
-                                    {scrapingStates[s.id] ? <CircularProgress size={20} /> : <Play size={20} />}
+                                    {(!!scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' && !scrapingStates[s.id].startsWith('Error')) ? <CircularProgress size={20} /> : <Play size={20} />}
                                 </IconButton>
                             </Box>
                         </Tooltip>
