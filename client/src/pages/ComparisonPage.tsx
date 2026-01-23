@@ -138,12 +138,43 @@ const ComparisonPage = () => {
     return `${language === 'he' ? 'עודכן' : 'Updated'} ${timeAgo}`;
   };
 
-  const calculateTotal = (results: any[]) => {
-    if (!results) return '0.00';
-    return results.reduce((sum, r) => {
-      if (typeof r.rawPrice === 'number') return sum + (r.rawPrice * r.quantity);
-      return sum;
-    }, 0).toFixed(2);
+  const calculateSmartTotal = (results: any[]) => {
+    if (!results) return { total: '0.00', missing: 0, isValid: false };
+    
+    const PENALTY_PRICE = 15 * 1.2;
+    let currentTotal = 0;
+    let missingCount = 0;
+
+    results.forEach((r: any) => {
+      let itemPrice = 0;
+      let isMissing = false;
+
+      const priceStr = String(r.price);
+      if (priceStr === 'N/A' || priceStr === 'NA' || r.rawPrice === 0) {
+          isMissing = true;
+      } else {
+          const priceVal = parseFloat(priceStr.replace(/[^\d.]/g, ''));
+          if (isNaN(priceVal) || priceVal === 0) {
+              isMissing = true;
+          } else {
+              itemPrice = priceVal;
+          }
+      }
+
+      if (isMissing) {
+          missingCount++;
+          itemPrice = PENALTY_PRICE * (r.quantity || 1);
+      }
+
+      currentTotal += itemPrice;
+    });
+
+    const isValid = results.length > 0 && (missingCount / results.length) <= 0.40;
+    return { 
+      total: currentTotal.toFixed(2), 
+      missing: missingCount, 
+      isValid 
+    };
   };
 
   const isDark = theme.palette.mode === 'dark';
@@ -203,8 +234,20 @@ const ComparisonPage = () => {
             filteredResults = filteredResults?.filter((r: any) => !r.promo_description?.includes('SBOX'));
           }
 
+          const smartData = calculateSmartTotal(filteredResults);
+
           return (
-          <Paper key={s.id} elevation={0} sx={{ p: 2, transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
+          <Paper 
+            key={s.id} 
+            elevation={0} 
+            sx={{ 
+                p: 2, 
+                transition: 'transform 0.2s', 
+                '&:hover': { transform: 'translateY(-2px)' },
+                opacity: smartData.isValid ? 1 : 0.6,
+                border: !smartData.isValid ? '1px dashed rgba(255,0,0,0.3)' : 'none'
+            }}
+          >
             <Box sx={{ mb: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <ListItemText 
                 primary={
@@ -227,11 +270,27 @@ const ComparisonPage = () => {
                     </span>
                   </Box>
                 }
-                secondary={storeStatuses[s.id] || (s.last_scrape_time ? t('ready') : t('ready'))}
-                secondaryTypographyProps={{ variant: 'caption', sx: { opacity: 0.7, fontSize: '0.8rem' } }}
+                secondary={
+                    <Box>
+                        <Typography variant="caption" sx={{ display: 'block', opacity: 0.7, fontSize: '0.8rem' }}>
+                            {storeStatuses[s.id] || (s.last_scrape_time ? t('ready') : t('ready'))}
+                        </Typography>
+                        {smartData.missing > 0 && (
+                            <Typography variant="caption" color="error" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                                * {smartData.missing} items missing
+                            </Typography>
+                        )}
+                        {!smartData.isValid && filteredResults?.length > 0 && (
+                            <Typography variant="caption" color="error" sx={{ fontWeight: 700, display: 'block', fontSize: '0.7rem' }}>
+                                (Too many missing items)
+                            </Typography>
+                        )}
+                    </Box>
+                }
+                secondaryTypographyProps={{ component: 'div' }}
               />
-              <Typography variant="h6" sx={{ fontWeight: 800, color: 'primary.main', fontSize: '1.4rem' }}>
-                {filteredResults ? `₪${calculateTotal(filteredResults)}` : '--.--'}
+              <Typography variant="h6" sx={{ fontWeight: 800, color: smartData.isValid ? 'primary.main' : 'text.disabled', fontSize: '1.4rem' }}>
+                {filteredResults ? `₪${smartData.total}` : '--.--'}
               </Typography>
             </Box>
             <List sx={{ p: 0 }} dense>
@@ -242,14 +301,14 @@ const ComparisonPage = () => {
                     sx={{ 
                       px: 0, 
                       py: 0.8,
-                      backgroundColor: (r.price === 'NA' || (r.name && r.name.toLowerCase().includes('not found'))) ? 'rgba(255, 0, 0, 0.3)' : 'transparent'
+                      backgroundColor: (r.price === 'N/A' || r.price === 'NA' || (r.name && r.name.toLowerCase().includes('not found'))) ? 'rgba(255, 0, 0, 0.05)' : 'transparent'
                     }} 
                     divider={i < filteredResults.length - 1}
                   >
                     <ListItemText 
                       primary={
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Typography variant="body2" sx={{ fontSize: '1rem', fontWeight: 500, lineHeight: 1.2 }}>
+                            <Typography variant="body2" sx={{ fontSize: '1rem', fontWeight: 500, lineHeight: 1.2, color: (r.price === 'N/A' || r.price === 'NA') ? 'text.disabled' : 'text.primary' }}>
                                 {r.item.itemName}
                             </Typography>
                             {r.promo_description && (
@@ -265,7 +324,9 @@ const ComparisonPage = () => {
                       secondary={r.name}
                       secondaryTypographyProps={{ noWrap: true, variant: 'caption', sx: { fontSize: '0.8rem', opacity: 0.6 } }}
                     />
-                    <Typography variant="body2" sx={{ fontWeight: 700, ml: 1, textAlign: 'right', whiteSpace: 'nowrap', fontSize: '1rem' }}>{r.price}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, ml: 1, textAlign: 'right', whiteSpace: 'nowrap', fontSize: '1rem', color: (r.price === 'N/A' || r.price === 'NA') ? 'error.main' : 'text.primary' }}>
+                        {r.price}
+                    </Typography>
                   </ListItem>
                 ))
               ) : (

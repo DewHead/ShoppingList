@@ -8,11 +8,11 @@ async function initDb() {
     driver: sqlite3.Database
   });
 
-  // Auto-fix: Drop table if it uses the wrong tokenizer (trigram)
+  // Auto-fix: Rebuild if tokenizer settings are missing '%' or single quote
   try {
       const ftsDef = await db.get("SELECT sql FROM sqlite_master WHERE name = 'items_fts'");
-      if (ftsDef && ftsDef.sql.includes('trigram')) {
-          console.log('Detected old trigram tokenizer. Rebuilding FTS table...');
+      if (ftsDef && (!ftsDef.sql.includes('tokenchars') || !ftsDef.sql.includes('%'))) {
+          console.log('FTS tokenizer settings outdated. Rebuilding FTS table...');
           await db.exec('DROP TABLE items_fts');
       }
   } catch (e) { console.log('Table check skipped'); }
@@ -74,7 +74,7 @@ async function initDb() {
       supermarket_id UNINDEXED, 
       price UNINDEXED, 
       branch_info UNINDEXED,
-      tokenize='unicode61'
+      tokenize="unicode61 tokenchars '%'''"
     );
 
     CREATE TABLE IF NOT EXISTS item_matches (

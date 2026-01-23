@@ -17,6 +17,8 @@ import {
   Collapse
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import SaveIcon from '@mui/icons-material/Save';
 import { PushPin, PushPinOutlined, ExpandMore, ExpandLess } from '@mui/icons-material';
 import { AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -109,7 +111,7 @@ const calculateBestPrice = (match: SearchResult, quantity: number) => {
                       }
                   }
               } else {
-                  currentTotal = promoPrice * quantity;
+                  const currentTotal = promoPrice * quantity;
                   if (currentTotal < bestResult.total) {
                       bestResult = { 
                           total: currentTotal, 
@@ -147,6 +149,9 @@ const ShoppingListPage = () => {
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [expandedStores, setExpandedStores] = useState<string[]>([]);
   const [pinnedItems, setPinnedItems] = useState<PinnedItem[]>([]);
+
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState('');
 
   const toggleStore = (storeName: string) => {
     setExpandedStores(prev => 
@@ -258,24 +263,32 @@ const ShoppingListPage = () => {
 
   const handlePinItem = async (shoppingListItemId: number, supermarketId: number, remoteId: string, currentIsPinned: boolean) => {
     try {
-      if (currentIsPinned) {
-        await axios.delete(`${API_BASE_URL}/api/shopping-list/match`, {
-          params: { shoppingListItemId, supermarketId }
-        });
-        setNotification("Item unpinned");
-      } else {
-        await axios.put(`${API_BASE_URL}/api/shopping-list/match`, {
-          shoppingListItemId,
-          supermarketId,
-          remoteId
-        });
-        setNotification("Item pinned!");
-      }
-      setTimeout(() => setNotification(null), 3000);
-      await Promise.all([fetchPinnedItems(), fetchComparison()]); 
+        if (currentIsPinned) {
+            // Unpin (DELETE)
+            await axios.delete(`${API_BASE_URL}/api/shopping-list/match`, {
+                params: { shoppingListItemId, supermarketId }
+            });
+            setNotification("Item unpinned");
+        } else {
+            // Pin (PUT) - This will overwrite any existing pin for this store/item
+            await axios.put(`${API_BASE_URL}/api/shopping-list/match`, {
+                shoppingListItemId,
+                supermarketId,
+                remoteId
+            });
+            setNotification("Item pinned!");
+        }
+        
+        // Force refresh of both lists to reflect changes immediately
+        await Promise.all([
+            fetchPinnedItems(),
+            fetchComparison()
+        ]); 
+        
+        setTimeout(() => setNotification(null), 3000);
     } catch (err) {
-      console.error('Error updating pin:', err);
-      setNotification("Error updating pin");
+        console.error('Error updating pin:', err);
+        setNotification("Error updating pin");
     }
   };
 
@@ -323,6 +336,25 @@ const ShoppingListPage = () => {
       await axios.put(`${API_BASE_URL}/api/shopping-list/${id}`, { quantity });
       fetchList();
     }
+  };
+
+  const updateItemName = async (id: number, name: string) => {
+    let finalName = name;
+    const hebrewConverted = toHebrew(finalName);
+    if (hebrewConverted !== finalName && /[\u0590-\u05FF]/.test(hebrewConverted)) {
+        finalName = hebrewConverted;
+    }
+    await axios.put(`${API_BASE_URL}/api/shopping-list/${id}`, { itemName: finalName });
+    
+    // Find the updated item to pass to handleItemClick
+    const updatedItem = items.find(i => i.id === id);
+    if (updatedItem) {
+        handleItemClick({ ...updatedItem, itemName: finalName });
+    }
+
+    setEditingId(null);
+    fetchList();
+    fetchComparison();
   };
 
   const handleItemClick = async (item: ShoppingListItem) => {
@@ -455,7 +487,9 @@ const ShoppingListPage = () => {
     else if (isStoreCheapest) priceColor = 'warning.main';
 
     const currentBestMatchForStore = storeResults[match.supermarket_id]?.find((r: any) => String(r.item.id) === String(item.id));
-    const isPinned = !!currentBestMatchForStore?.is_pinned && currentBestMatchForStore?.remote_id === match.remote_id;
+    
+    const isPinned = !!currentBestMatchForStore?.is_pinned && 
+                     String(currentBestMatchForStore.remote_id) === String(match.remote_id);
     
     return (
         <ListItem key={`${match.supermarket_id}-${match.remote_id}-${item.id}`} disableGutters sx={{ py: 0.5 }}>
@@ -489,7 +523,10 @@ const ShoppingListPage = () => {
             <Box sx={{ textAlign: 'right', ml: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <IconButton 
                     size="small" 
-                    onClick={(e) => { e.stopPropagation(); handlePinItem(item.id, match.supermarket_id, match.remote_id, isPinned); }}
+                    onClick={(e) => { 
+                        e.stopPropagation(); 
+                        handlePinItem(item.id, match.supermarket_id, match.remote_id, isPinned); 
+                    }}
                     color={isPinned ? "primary" : "default"}
                     sx={{ p: 0.5 }}
                 >
@@ -516,60 +553,21 @@ const ShoppingListPage = () => {
   const hasSidePanel = !!cheapestStore || selectedItemIds.length > 0;
 
   return (
-    <Box sx={hasSidePanel ? { display: 'grid', gridTemplateColumns: { md: '400px 320px' }, gap: 12, justifyContent: 'center', mx: 'auto' } : { maxWidth: '600px', mx: 'auto' }}>
-      <Box>
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" sx={{ mb: 1, fontSize: '2.5rem' }}>{t('myList')}</Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.2rem' }}>{t('myListDescription')}</Typography>
-        </Box>
-        
-        <Paper elevation={0} sx={{ p: 2, mb: 5, display: 'flex', gap: 2, alignItems: 'center', backgroundColor: theme.palette.mode === 'dark' ? 'rgba(40, 40, 40, 0.7)' : 'rgba(103, 58, 183, 0.15)' }}>
-          <Autocomplete
-            freeSolo
-            options={autocompleteOptions}
-            sx={{ flexGrow: 1 }}
-            value={newItemName}
-            onInputChange={(_, newInputValue) => setNewItemName(newInputValue)}
-            onKeyDown={(e) => e.key === 'Enter' && addItem()}
-            renderInput={(params) => <TextField {...params} placeholder={t('addItemPlaceholder')} variant="outlined" size="small" inputProps={{ ...params.inputProps, style: { fontSize: '1.2rem' } }} />}
-          />
-          <TextField type="number" value={newItemQuantity} onChange={(e) => setNewItemQuantity(Number(e.target.value))} onKeyDown={(e) => e.key === 'Enter' && addItem()} sx={{ width: '80px' }} size="small" inputProps={{ min: 1, style: { fontSize: '1.2rem' } }} />
-          <Button variant="contained" onClick={addItem} sx={{ py: 1.2, px: 4, fontSize: '1.2rem' }}>{t('add')}</Button>
-        </Paper>
-
-        {notification && (
-          <Box sx={{ position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'rgba(0, 0, 0, 0.8)', color: 'white', padding: '10px 20px', borderRadius: '8px', zIndex: 1500, animation: 'fadeInOut 5s forwards', overflow: 'hidden' }}>
-            {notification}
-            <Box sx={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '4px', backgroundColor: 'rgba(255, 255, 255, 0.5)', animation: 'countdown 5s linear forwards' }}/>
-          </Box>
-        )}
-
-        <Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" sx={{ m: 0, fontSize: '1.6rem' }}>{t('itemsInCart')}</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {isMultiSelect && <Button size="small" variant="text" onClick={() => { setSelectedItemIds(items.map(i => i.id)); items.forEach(i => !itemMatches[i.id] && handleItemClick(i)); }} sx={{ fontSize: '1rem', py: 0 }}>Select All</Button>}
-                <FormControlLabel control={<Switch size="small" checked={isMultiSelect} onChange={(e) => { setIsMultiSelect(e.target.checked); if (!e.target.checked) { setSelectedItemIds([]); setItemMatches({}); } }} />} label={<Typography variant="caption" sx={{ fontSize: '1rem' }}>Multi-Select</Typography>} />
-            </Box>
-          </Box>
-          <Paper elevation={0}>
-            <List sx={{ p: 0 }} dense>
-              {items.map((item, index) => (
-                <ListItem key={item.id} divider={index < items.length - 1} selected={selectedItemIds.includes(item.id)} onClick={() => handleItemClick(item)} sx={{ px: 2, py: 1, bgcolor: selectedItemIds.includes(item.id) ? (theme.palette.mode === 'dark' ? 'rgba(90, 90, 90, 0.5)' : 'rgba(103, 58, 183, 0.25)') : (theme.palette.mode === 'dark' ? 'rgba(40, 40, 40, 0.7)' : 'rgba(103, 58, 183, 0.15)'), cursor: 'pointer', transition: 'background-color 0.2s', '&:hover': { bgcolor: theme.palette.mode === 'dark' ? 'rgba(60, 60, 60, 0.7)' : 'rgba(103, 58, 183, 0.2)' } }}>
-                  <ListItemText primary={item.itemName} primaryTypographyProps={{ fontWeight: 600, fontSize: '1.3rem' }} sx={{ m: 0 }} />
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
-                    <TextField type="number" value={item.quantity} onChange={(e) => updateItemQuantity(item.id, Number(e.target.value))} onClick={(e) => e.stopPropagation()} sx={{ width: '60px' }} size="small" inputProps={{ min: 1, style: { padding: '4px 6px', fontSize: '1.2rem', textAlign: 'center' } }} />
-                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' }}}><DeleteIcon sx={{ fontSize: '1.6rem' }} /></IconButton>
-                  </Box>
-                </ListItem>
-              ))}
-              {items.length === 0 && <Box sx={{ p: 4, textAlign: 'center' }}><Typography color="text.secondary">{t('emptyList')}</Typography></Box>}
-            </List>
-          </Paper>
-        </Box>
-      </Box>
-
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <Box 
+        dir="rtl"
+        sx={hasSidePanel ? { 
+            display: 'grid', 
+            gridTemplateColumns: { md: '320px 400px' }, 
+            gap: 12, 
+            justifyContent: 'center', 
+            mx: 'auto' 
+        } : { 
+            maxWidth: '600px', 
+            mx: 'auto' 
+        }}
+    >
+      {/* Side Panel (Now on the right in RTL grid, which visually is the LEFT side) */}
+      <Box dir="ltr" sx={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 3 }}>
           {selectedItemIds.length > 0 && (
             <Paper elevation={0} sx={{ p: 2, bgcolor: theme.palette.background.paper, border: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -641,6 +639,84 @@ const ShoppingListPage = () => {
               </List>
             </Paper>
           )}
+      </Box>
+
+      {/* Main List (Now on the left in RTL grid, which visually is the RIGHT side) */}
+      <Box dir="ltr" sx={{ textAlign: 'left' }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" sx={{ mb: 1, fontSize: '2.5rem' }}>{t('myList')}</Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.2rem' }}>{t('myListDescription')}</Typography>
+        </Box>
+        
+        <Paper elevation={0} sx={{ p: 2, mb: 5, display: 'flex', gap: 2, alignItems: 'center', backgroundColor: theme.palette.mode === 'dark' ? 'rgba(40, 40, 40, 0.7)' : 'rgba(103, 58, 183, 0.15)' }}>
+          <Autocomplete
+            freeSolo
+            options={autocompleteOptions}
+            sx={{ flexGrow: 1 }}
+            value={newItemName}
+            onInputChange={(_, newInputValue) => setNewItemName(newInputValue)}
+            onKeyDown={(e) => e.key === 'Enter' && addItem()}
+            renderInput={(params) => <TextField {...params} placeholder={t('addItemPlaceholder')} variant="outlined" size="small" inputProps={{ ...params.inputProps, style: { fontSize: '1.2rem' } }} />}
+          />
+          <TextField type="number" value={newItemQuantity} onChange={(e) => setNewItemQuantity(Number(e.target.value))} onKeyDown={(e) => e.key === 'Enter' && addItem()} sx={{ width: '80px' }} size="small" inputProps={{ min: 1, style: { fontSize: '1.2rem' } }} />
+          <Button variant="contained" onClick={addItem} sx={{ py: 1.2, px: 4, fontSize: '1.2rem' }}>{t('add')}</Button>
+        </Paper>
+
+        {notification && (
+          <Box sx={{ position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'rgba(0, 0, 0, 0.8)', color: 'white', padding: '10px 20px', borderRadius: '8px', zIndex: 1500, animation: 'fadeInOut 5s forwards', overflow: 'hidden' }}>
+            {notification}
+            <Box sx={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '4px', backgroundColor: 'rgba(255, 255, 255, 0.5)', animation: 'countdown 5s linear forwards' }}/>
+          </Box>
+        )}
+
+        <Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" sx={{ m: 0, fontSize: '1.6rem' }}>{t('itemsInCart')}</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {isMultiSelect && <Button size="small" variant="text" onClick={() => { setSelectedItemIds(items.map(i => i.id)); items.forEach(i => !itemMatches[i.id] && handleItemClick(i)); }} sx={{ fontSize: '1rem', py: 0 }}>Select All</Button>}
+                <FormControlLabel control={<Switch size="small" checked={isMultiSelect} onChange={(e) => { setIsMultiSelect(e.target.checked); if (!e.target.checked) { setSelectedItemIds([]); setItemMatches({}); } }} />} label={<Typography variant="caption" sx={{ fontSize: '1rem' }}>Multi-Select</Typography>} />
+            </Box>
+          </Box>
+          <Paper elevation={0}>
+            <List sx={{ p: 0 }} dense>
+              {items.map((item, index) => (
+                <ListItem key={item.id} divider={index < items.length - 1} selected={selectedItemIds.includes(item.id)} onClick={() => handleItemClick(item)} sx={{ px: 2, py: 1, bgcolor: selectedItemIds.includes(item.id) ? (theme.palette.mode === 'dark' ? 'rgba(90, 90, 90, 0.5)' : 'rgba(103, 58, 183, 0.25)') : (theme.palette.mode === 'dark' ? 'rgba(40, 40, 40, 0.7)' : 'rgba(103, 58, 183, 0.15)'), cursor: 'pointer', transition: 'background-color 0.2s', '&:hover': { bgcolor: theme.palette.mode === 'dark' ? 'rgba(60, 60, 60, 0.7)' : 'rgba(103, 58, 183, 0.2)' } }}>
+                  {editingId === item.id ? (
+                      <TextField
+                        size="small"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') updateItemName(item.id, editingName);
+                            if (e.key === 'Escape') setEditingId(null);
+                        }}
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                        sx={{ flexGrow: 1, mr: 2 }}
+                        inputProps={{ style: { fontWeight: 600, fontSize: '1.3rem' } }}
+                      />
+                  ) : (
+                    <ListItemText primary={item.itemName} primaryTypographyProps={{ fontWeight: 600, fontSize: '1.3rem' }} sx={{ m: 0 }} />
+                  )}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
+                    <TextField type="number" value={item.quantity} onChange={(e) => updateItemQuantity(item.id, Number(e.target.value))} onClick={(e) => e.stopPropagation()} sx={{ width: '60px' }} size="small" inputProps={{ min: 1, style: { padding: '4px 6px', fontSize: '1.2rem', textAlign: 'center' } }} />
+                    {editingId === item.id ? (
+                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); updateItemName(item.id, editingName); }} color="primary">
+                            <SaveIcon sx={{ fontSize: '1.6rem' }} />
+                        </IconButton>
+                    ) : (
+                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEditingId(item.id); setEditingName(item.itemName); }} sx={{ color: 'text.secondary' }}>
+                            <EditIcon sx={{ fontSize: '1.6rem' }} />
+                        </IconButton>
+                    )}
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' }}}><DeleteIcon sx={{ fontSize: '1.6rem' }} /></IconButton>
+                  </Box>
+                </ListItem>
+              ))}
+              {items.length === 0 && <Box sx={{ p: 4, textAlign: 'center' }}><Typography color="text.secondary">{t('emptyList')}</Typography></Box>}
+            </List>
+          </Paper>
+        </Box>
       </Box>
     </Box>
   );

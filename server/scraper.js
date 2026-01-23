@@ -111,6 +111,17 @@ function fixSpacing(text) {
   // NEW: Normalize Liter variations
   fixed = fixed.replace(/(\d+)\s*(ליטר|ליט|ל'|ל)(\s|$)/g, '$1 ליטר$3');
 
+  // NEW: Add % to trailing fat content numbers (e.g. "גאודה 28" -> "גאודה 28%")
+  // REFINED: Only if it looks like a dairy product AND not followed by count units
+  const isDairyProduct = /(גבינה|גבינ|שמנת|יוגורט|חלב|לאבנה|קוטג|בוראטה|גאודה|טל העמק|עמק)/i.test(text);
+  if (isDairyProduct) {
+      fixed = fixed.replace(/(\D\s)(\d{1,2})(\s|$)/g, (match, p1, p2, p3) => {
+          // Explicitly avoid count units
+          if (p3.includes('%') || p3.includes('יחידות') || p3.includes('יח') || p3.includes('גרם') || p3.includes('מל')) return match;
+          return `${p1}${p2}%${p3}`;
+      });
+  }
+
   // 5. Final space normalization
   fixed = fixed.replace(/\s+/g, ' ').trim();
   return fixed;
@@ -539,16 +550,25 @@ async function handleRamiLevy(page, supermarket, items, io, onResults, context) 
             const productArray = Array.isArray(products) ? products : [products].filter(p => p);
 
             for (const product of productArray) {
+              const qty = product.Quantity || product.ItemQuantity || '';
+              const unit = product.UnitOfMeasure || '';
+              let fullName = product.ItemName;
+              
+              // Append weight/qty to name if not already present
+              if (qty && !fullName.includes(qty)) {
+                  fullName += ` ${qty} ${unit}`;
+              }
+
               allDiscoveredProducts.push({
                 supermarket_id: supermarket.id,
                 item_id: null,
                 remote_id: product.ItemCode,
-                remote_name: fixSpacing(product.ItemName),
+                remote_name: fixSpacing(fullName),
                 branch_info: branchInfo,
                 price: parseFloat(product.ItemPrice),
-                unit_of_measure: product.UnitOfMeasure || null,
+                unit_of_measure: unit || null,
                 unit_of_measure_price: parseFloat(product.UnitOfMeasurePrice) || null,
-                manufacturer: product.ManufacturerName || null,
+                manufacturer: product.ManufacturerName || product.ProducerName || null,
                 country: product.ManufactureCountry || null,
                 last_updated: new Date().toISOString(),
               });
