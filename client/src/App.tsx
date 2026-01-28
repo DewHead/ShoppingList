@@ -24,10 +24,27 @@ import { AppContext } from './AppContext';
 import { useTranslation } from './useTranslation';
 import BottomNav from './components/BottomNav';
 
+import { AnimatePresence } from 'framer-motion';
+import PageTransition from './components/PageTransition';
+
 import ShoppingListPage from './pages/ShoppingListPage';
 import SettingsPage from './pages/SettingsPage';
 import ComparisonPage from './pages/ComparisonPage';
 import { ScrapedDataPage } from './pages/ScrapedDataPage';
+
+function AnimatedRoutes() {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<PageTransition><ShoppingListPage /></PageTransition>} />
+        <Route path="/comparison" element={<PageTransition><ComparisonPage /></PageTransition>} />
+        <Route path="/settings" element={<PageTransition><SettingsPage /></PageTransition>} />
+        <Route path="/scraped-data/:id" element={<PageTransition><ScrapedDataPage /></PageTransition>} />
+      </Routes>
+    </AnimatePresence>
+  );
+}
 
 function DesktopNavigationButtons() {
   const location = useLocation();
@@ -120,12 +137,7 @@ function App() {
             margin: '0 auto',
             width: '100%'
           }}>
-            <Routes>
-              <Route path="/" element={<ShoppingListPage />} />
-              <Route path="/comparison" element={<ComparisonPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/scraped-data/:id" element={<ScrapedDataPage />} />
-            </Routes>
+            <AnimatedRoutes />
           </Box>
 
           <BottomNav />

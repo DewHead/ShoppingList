@@ -75,6 +75,9 @@ export const getTheme = (mode: PaletteMode, direction: 'ltr' | 'rtl') => createT
           borderRadius: 8, // Specific override for buttons
           padding: '8px 16px', // Tighter padding
           transition: 'all 0.2s',
+          '&:active': {
+            transform: 'scale(0.98)',
+          },
         },
         containedPrimary: {
           backgroundColor: '#673ab7',
