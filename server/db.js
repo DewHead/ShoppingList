@@ -54,6 +54,7 @@ async function initDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       item_id INTEGER,
       quantity INTEGER DEFAULT 1,
+      is_done BOOLEAN DEFAULT 0,
       FOREIGN KEY (item_id) REFERENCES items (id)
     );
 
@@ -101,6 +102,11 @@ async function initDb() {
     const smInfo = await db.all("PRAGMA table_info(supermarkets)");
     if (!smInfo.some(c => c.name === 'branch_remote_id')) {
         await db.exec('ALTER TABLE supermarkets ADD COLUMN branch_remote_id TEXT');
+    }
+
+    const slInfo = await db.all("PRAGMA table_info(shopping_list)");
+    if (!slInfo.some(c => c.name === 'is_done')) {
+        await db.exec('ALTER TABLE shopping_list ADD COLUMN is_done BOOLEAN DEFAULT 0');
     }
   } catch (err) { console.error('Migration error:', err.message); }
 

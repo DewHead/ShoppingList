@@ -18,6 +18,8 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
+import CheckIcon from '@mui/icons-material/Check';
+import UndoIcon from '@mui/icons-material/Undo';
 import { PushPin, PushPinOutlined, ExpandMore, ExpandLess } from '@mui/icons-material';
 import { AlertCircle } from 'lucide-react';
 import {
@@ -43,6 +45,7 @@ interface ShoppingListItem {
   itemName: string;
   quantity: number;
   itemId: number;
+  is_done?: number | boolean;
 }
 
 interface SearchResult {
@@ -299,6 +302,11 @@ const ShoppingListPage = () => {
       await axios.put(`${API_BASE_URL}/api/shopping-list/${id}`, { quantity });
       fetchList();
     }
+  };
+
+  const toggleItemDone = async (item: ShoppingListItem) => {
+    await axios.put(`${API_BASE_URL}/api/shopping-list/${item.id}`, { is_done: !item.is_done });
+    fetchList();
   };
 
   const updateItemName = async (id: number, name: string) => {
@@ -644,7 +652,25 @@ const ShoppingListPage = () => {
             <SwipeableList fullSwipe={false} type={SwipeType.IOS}>
               {items.map((item, index) => {
                 const isSelected = selectedItemIds.includes(item.id);
+                const isDone = !!item.is_done;
                 
+                const leadingActions = () => (
+                  <LeadingActions>
+                    <SwipeAction onClick={() => toggleItemDone(item)}>
+                      <Box sx={{ 
+                        bgcolor: isDone ? 'warning.main' : 'success.main', 
+                        color: 'white', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        px: 3, 
+                        height: '100%' 
+                      }}>
+                        {isDone ? <UndoIcon /> : <CheckIcon />}
+                      </Box>
+                    </SwipeAction>
+                  </LeadingActions>
+                );
+
                 const trailingActions = () => (
                   <TrailingActions>
                     <SwipeAction
@@ -668,6 +694,7 @@ const ShoppingListPage = () => {
                 return (
                   <SwipeableListItem
                     key={item.id}
+                    leadingActions={leadingActions()}
                     trailingActions={trailingActions()}
                   >
                     <ListItem 
@@ -679,7 +706,9 @@ const ShoppingListPage = () => {
                           cursor: 'pointer',
                           bgcolor: isSelected ? 'action.selected' : 'background.paper',
                           '&:hover': { bgcolor: isSelected ? 'action.selected' : 'action.hover' },
-                          width: '100%'
+                          width: '100%',
+                          opacity: isDone ? 0.6 : 1,
+                          transition: 'opacity 0.2s'
                       }}
                     >
                     {editingId === item.id ? (
@@ -697,7 +726,14 @@ const ShoppingListPage = () => {
                           inputProps={{ style: { fontWeight: 600 } }}
                         />
                     ) : (
-                      <ListItemText primary={item.itemName} primaryTypographyProps={{ fontWeight: 600 }} sx={{ m: 0 }} />
+                      <ListItemText 
+                        primary={item.itemName} 
+                        primaryTypographyProps={{ 
+                          fontWeight: 600,
+                          sx: { textDecoration: isDone ? 'line-through' : 'none' }
+                        }} 
+                        sx={{ m: 0 }} 
+                      />
                     )}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
                       <TextField type="number" value={item.quantity} onChange={(e) => updateItemQuantity(item.id, Number(e.target.value))} onClick={(e) => e.stopPropagation()} sx={{ width: '60px' }} size="small" inputProps={{ min: 1, style: { padding: '4px 8px', textAlign: 'center' } }} />

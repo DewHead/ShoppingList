@@ -363,7 +363,7 @@ app.put('/api/supermarkets/:id', async (req, res) => {
 
 // Shopping List
 app.get('/api/shopping-list', async (req, res) => {
-  const list = await db.all(`SELECT sl.id, sl.quantity, i.name as itemName, i.id as itemId FROM shopping_list sl JOIN items i ON sl.item_id = i.id`);
+  const list = await db.all(`SELECT sl.id, sl.quantity, sl.is_done, i.name as itemName, i.id as itemId FROM shopping_list sl JOIN items i ON sl.item_id = i.id`);
   res.json(list);
 });
 
@@ -384,10 +384,13 @@ app.delete('/api/shopping-list/:id', async (req, res) => {
 });
 
 app.put('/api/shopping-list/:id', async (req, res) => {
-  const { quantity, itemName } = req.body;
+  const { quantity, itemName, is_done } = req.body;
   try {
     if (quantity !== undefined) {
       await db.run('UPDATE shopping_list SET quantity = ? WHERE id = ?', [quantity, req.params.id]);
+    }
+    if (is_done !== undefined) {
+      await db.run('UPDATE shopping_list SET is_done = ? WHERE id = ?', [is_done ? 1 : 0, req.params.id]);
     }
     if (itemName) {
       let item = await db.get('SELECT id FROM items WHERE name = ?', [itemName]);
