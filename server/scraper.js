@@ -1,8 +1,8 @@
 const { chromium } = require('playwright-extra');
 const stealth = require('puppeteer-extra-plugin-stealth')();
-const handleShufersal = require('./scrapers/shufersal');
-const handleRamiLevy = require('./scrapers/ramiLevy');
-const handleMahsaneyHashuk = require('./scrapers/mahsaneyHashuk');
+const ShufersalScraper = require('./scrapers/shufersal');
+const RamiLevyScraper = require('./scrapers/ramiLevy');
+const MahsaneyHashukScraper = require('./scrapers/mahsaneyHashuk');
 
 chromium.use(stealth);
 
@@ -17,14 +17,34 @@ async function scrapeStore(supermarket, items, io, onResults) {
   try {
     io.emit('storeStatus', { storeId: supermarket.id, status: 'Starting scrape...' });
     
+    let scraper;
     if (supermarket.url.includes('shufersal')) {
-      await handleShufersal(page, supermarket, items, io, onResults);
+      scraper = new ShufersalScraper(supermarket, io);
     } else if (supermarket.url.includes('publishedprices.co.il') || supermarket.name.includes('רמי לוי')) {
-      await handleRamiLevy(page, supermarket, items, io, onResults, context);
+      scraper = new RamiLevyScraper(supermarket, io);
     } else if (supermarket.url.includes('mahsaneyshak')) {
-      await handleMahsaneyHashuk(page, supermarket, items, io, onResults);
+      scraper = new MahsaneyHashukScraper(supermarket, io);
     }
-    io.emit('storeStatus', { storeId: supermarket.id, status: 'Done' }); // Emit Done status on success
+
+    if (scraper) {
+      const { products, promos } = await scraper.scrape(page);
+      
+      if (onResults) {
+        await onResults(supermarket.id, products, promos);
+      }
+      
+      io.emit('results', { 
+        storeId: supermarket.id, 
+        results: [], 
+        coupons: [], 
+        discoveryResults: products, 
+        promos: promos 
+      });
+      
+      io.emit('storeStatus', { storeId: supermarket.id, status: 'Done' });
+    } else {
+      throw new Error(`No scraper found for supermarket: ${supermarket.name}`);
+    }
 
   } catch (err) {
     console.error(`Error scraping ${supermarket.name}:`, err);
