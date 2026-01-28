@@ -9,7 +9,7 @@
     - [x] Implement standard error handling and retry logic.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Refactoring' (Protocol in workflow.md)
 
-## Phase 2: Multi-Retailer Support
+## Phase 2: Multi-Retailer Support [checkpoint: 139cd9a]
 - [x] Task: Implement Rami Levy Scraper 02fe3c1
     - [x] Write tests for Rami Levy site navigation.
     - [x] Implement item search and price extraction for Rami Levy.
