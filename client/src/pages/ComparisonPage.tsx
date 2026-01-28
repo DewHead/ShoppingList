@@ -26,6 +26,8 @@ import { API_BASE_URL } from '../config';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { AppContext } from '../AppContext';
+import { calculateSmartTotal } from '../utils/comparisonUtils';
+import ComparisonSummary from '../components/ComparisonSummary';
 import './ComparisonPage.css';
 
 const socket = io(API_BASE_URL);
@@ -138,45 +140,6 @@ const ComparisonPage = () => {
     return `${language === 'he' ? 'עודכן' : 'Updated'} ${timeAgo}`;
   };
 
-  const calculateSmartTotal = (results: any[]) => {
-    if (!results) return { total: '0.00', missing: 0, isValid: false };
-    
-    const PENALTY_PRICE = 15 * 1.2;
-    let currentTotal = 0;
-    let missingCount = 0;
-
-    results.forEach((r: any) => {
-      let itemPrice = 0;
-      let isMissing = false;
-
-      const priceStr = String(r.price);
-      if (priceStr === 'N/A' || priceStr === 'NA' || r.rawPrice === 0) {
-          isMissing = true;
-      } else {
-          const priceVal = parseFloat(priceStr.replace(/[^\d.]/g, ''));
-          if (isNaN(priceVal) || priceVal === 0) {
-              isMissing = true;
-          } else {
-              itemPrice = priceVal;
-          }
-      }
-
-      if (isMissing) {
-          missingCount++;
-          itemPrice = PENALTY_PRICE * (r.quantity || 1);
-      }
-
-      currentTotal += itemPrice;
-    });
-
-    const isValid = results.length > 0 && (missingCount / results.length) <= 0.40;
-    return { 
-      total: currentTotal.toFixed(2), 
-      missing: missingCount, 
-      isValid 
-    };
-  };
-
   const isDark = theme.palette.mode === 'dark';
 
   const hasCoupons = Object.values(storeResults).some(store => 
@@ -201,6 +164,13 @@ const ComparisonPage = () => {
 
   const validTotals = storeTotals.filter(t => t.isValid).map(t => parseFloat(t.total));
   const minTotal = validTotals.length > 0 ? Math.min(...validTotals) : null;
+  const maxTotal = validTotals.length > 0 ? Math.max(...validTotals).toFixed(2) : null;
+
+  const cheapestStoreData = minTotal !== null ? (() => {
+    const winner = storeTotals.find(t => t.isValid && parseFloat(t.total) === minTotal);
+    const store = supermarkets.find(s => s.id === winner?.id);
+    return store ? { name: store.name, total: winner!.total } : null;
+  })() : null;
 
   return (
     <Box>
@@ -241,6 +211,8 @@ const ComparisonPage = () => {
           </Tooltip>
         </Box>
       </Box>
+
+      <ComparisonSummary cheapestStore={cheapestStoreData} maxTotal={maxTotal} />
 
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 3 }}>
         {supermarkets.filter(s => s.is_active).map(s => {
