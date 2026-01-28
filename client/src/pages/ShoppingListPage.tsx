@@ -10,7 +10,6 @@ import {
   IconButton, 
   Paper,
   Autocomplete,
-  useTheme,
   Tooltip,
   Switch,
   FormControlLabel,
@@ -21,11 +20,11 @@ import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import { PushPin, PushPinOutlined, ExpandMore, ExpandLess } from '@mui/icons-material';
 import { AlertCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import { useTranslation } from '../useTranslation';
 import { API_BASE_URL } from '../config';
+import AddItemFAB from '../components/AddItemFAB';
 import './ShoppingListPage.css';
 
 const socket = io(API_BASE_URL);
@@ -37,12 +36,6 @@ interface ShoppingListItem {
   itemId: number;
 }
 
-interface Item {
-  id: number;
-  name: string;
-  remote_id?: string;
-}
-
 interface SearchResult {
   supermarket_id: number;
   supermarket_name: string;
@@ -52,12 +45,6 @@ interface SearchResult {
   promo_description?: string;
   branch_info?: string;
   is_pinned?: boolean;
-}
-
-interface PinnedItem {
-  shopping_list_item_id: number;
-  supermarket_id: number;
-  remote_id: string;
 }
 
 const toHebrew = (str: string) => {
@@ -129,14 +116,10 @@ const calculateBestPrice = (match: SearchResult, quantity: number) => {
 };
 
 const ShoppingListPage = () => {
-  const theme = useTheme();
   const { t } = useTranslation();
   
   const [items, setItems] = useState<ShoppingListItem[]>([]);
-  const [newItemName, setNewItemName] = useState('');
-  const [newItemQuantity, setNewItemQuantity] = useState(1);
   const [notification, setNotification] = useState<string | null>(null);
-  const [knownItems, setKnownItems] = useState<Item[]>([]);
   const [storeResults, setStoreResults] = useState<Record<number, any[]>>({});
   const [supermarkets, setSupermarkets] = useState<any[]>([]);
   const [activeSale, setActiveSale] = useState<number | null>(null);
@@ -148,7 +131,6 @@ const ShoppingListPage = () => {
   const [itemMatches, setItemMatches] = useState<Record<number, Record<string, SearchResult[]>>>({});
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [expandedStores, setExpandedStores] = useState<string[]>([]);
-  const [pinnedItems, setPinnedItems] = useState<PinnedItem[]>([]);
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -170,14 +152,6 @@ const ShoppingListPage = () => {
     }
   };
 
-  const checkIsPinned = (supermarketId: number, remoteId: string, listItemId: number) => {
-    return pinnedItems.some(p => 
-        String(p.supermarket_id) === String(supermarketId) && 
-        String(p.remote_id) === String(remoteId) && 
-        String(p.shopping_list_item_id) === String(listItemId)
-    );
-  };
-
   const minTotalsPerItem = useMemo(() => {
       const mins: Record<number, number> = {};
       Object.entries(itemMatches).forEach(([itemIdStr, storeMatches]) => {
@@ -197,10 +171,8 @@ const ShoppingListPage = () => {
 
   useEffect(() => {
     fetchList();
-    fetchKnownItems();
     fetchSupermarkets();
     fetchComparison();
-    fetchPinnedItems();
 
     socket.on('results', (data) => {
       setStoreResults(prev => ({ ...prev, [data.storeId]: data.results }));
@@ -242,23 +214,9 @@ const ShoppingListPage = () => {
     }
   };
 
-  const fetchPinnedItems = async () => {
-    try {
-        const res = await axios.get(`${API_BASE_URL}/api/shopping-list/matches`);
-        setPinnedItems(res.data);
-    } catch (err) {
-        console.error('Error fetching pinned items:', err);
-    }
-  };
-
   const fetchList = async () => {
     const res = await axios.get(`${API_BASE_URL}/api/shopping-list`);
     setItems(res.data);
-  };
-
-  const fetchKnownItems = async () => {
-    const res = await axios.get(`${API_BASE_URL}/api/items`);
-    setKnownItems(res.data);
   };
 
   const handlePinItem = async (shoppingListItemId: number, supermarketId: number, remoteId: string, currentIsPinned: boolean) => {
@@ -281,7 +239,6 @@ const ShoppingListPage = () => {
         
         // Force refresh of both lists to reflect changes immediately
         await Promise.all([
-            fetchPinnedItems(),
             fetchComparison()
         ]); 
         
@@ -292,32 +249,29 @@ const ShoppingListPage = () => {
     }
   };
 
-  const addItem = async () => {
-    if (!newItemName) return;
-    let itemName = newItemName;
+  const addItem = async (name: string, quantity: number) => {
+    if (!name) return;
+    let itemName = name;
     const hebrewConverted = toHebrew(itemName);
     if (hebrewConverted !== itemName && /[\u0590-\u05FF]/.test(hebrewConverted)) {
         itemName = hebrewConverted;
     }
     const existingItem = items.find(item => item.itemName.toLowerCase() === itemName.toLowerCase());
     if (existingItem) {
-      const newQuantity = existingItem.quantity + newItemQuantity;
+      const newQuantity = existingItem.quantity + quantity;
       await updateItemQuantity(existingItem.id, newQuantity);
       setNotification(t('itemUpdated', { itemName }));
       setTimeout(() => setNotification(null), 5000);
     } else {
-      await axios.post(`${API_BASE_URL}/api/shopping-list`, { itemName: itemName, quantity: newItemQuantity });
+      await axios.post(`${API_BASE_URL}/api/shopping-list`, { itemName: itemName, quantity: quantity });
       const listRes = await axios.get(`${API_BASE_URL}/api/shopping-list`);
       const updatedList = listRes.data;
       setItems(updatedList);
-      fetchKnownItems();
       if (updatedList.length > 0) {
           const newItem = updatedList.reduce((prev: any, current: any) => (prev.id > current.id) ? prev : current);
           handleItemClick(newItem);
       }
     }
-    setNewItemName('');
-    setNewItemQuantity(1);
   };
 
   const removeItem = async (id: number) => {
@@ -497,7 +451,7 @@ const ShoppingListPage = () => {
                 primary={
                     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2, fontSize: '1.1rem' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
                                 {displayName}
                             </Typography>
                             {match.promo_description && (() => {
@@ -507,12 +461,12 @@ const ShoppingListPage = () => {
                                 return storeSetting ? JSON.parse(storeSetting) : false;
                             })() && (
                                 <Tooltip title={getPromoMessage(match.promo_description, item.quantity)} arrow placement="top">
-                                    <Box sx={{ display: 'inline-flex', color: 'primary.main', cursor: 'help' }}><AlertCircle size={18} /></Box>
+                                    <Box sx={{ display: 'inline-flex', color: 'primary.main', cursor: 'help' }}><AlertCircle size={16} /></Box>
                                 </Tooltip>
                             )}
                         </Box>
                         {displayName !== match.remote_name && (
-                            <Typography variant="caption" sx={{ opacity: 0.7, fontSize: '0.95rem', lineHeight: 1.1 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.1 }}>
                                 {match.remote_name}
                             </Typography>
                         )}
@@ -520,7 +474,7 @@ const ShoppingListPage = () => {
                 } 
                 primaryTypographyProps={{ component: 'div' }}
             />
-            <Box sx={{ textAlign: 'right', ml: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{ textAlign: 'right', ml: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <IconButton 
                     size="small" 
                     onClick={(e) => { 
@@ -532,16 +486,16 @@ const ShoppingListPage = () => {
                 >
                     {isPinned ? <PushPin fontSize="small" /> : <PushPinOutlined fontSize="small" />}
                 </IconButton>
-                <Typography variant="caption" sx={{ color: 'text.secondary', whiteSpace: 'nowrap', fontSize: '0.95rem' }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
                     ₪{match.price.toFixed(2)}
                 </Typography>
-                <Box sx={{ minWidth: '75px' }}>
+                <Box sx={{ minWidth: '60px', textAlign: 'right' }}>
                     {isPromo && (
-                        <Typography variant="caption" sx={{ textDecoration: 'line-through', color: 'text.secondary', display: 'block', fontSize: '0.95rem', lineHeight: 1 }}>
+                        <Typography variant="caption" sx={{ textDecoration: 'line-through', color: 'text.secondary', display: 'block', lineHeight: 1 }}>
                             ₪{originalTotal.toFixed(2)}
                         </Typography>
                     )}
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: priceColor, fontSize: '1.25rem' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: priceColor }}>
                         ₪{total.toFixed(2)}
                     </Typography>
                 </Box>
@@ -569,28 +523,28 @@ const ShoppingListPage = () => {
       {/* Side Panel (Now on the right in RTL grid, which visually is the LEFT side) */}
       <Box dir="ltr" sx={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 3 }}>
           {selectedItemIds.length > 0 && (
-            <Paper elevation={0} sx={{ p: 2, bgcolor: theme.palette.background.paper, border: '1px solid', borderColor: 'divider' }}>
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" sx={{ fontSize: '1.4rem', fontWeight: 600 }}>
+            <Paper sx={{ p: 0, overflow: 'hidden' }}>
+                <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <Typography variant="h6" sx={{ fontSize: '1.1rem' }}>
                         {selectedItems.length === 1 ? `${t('matchesFor') || 'Matches for'} "${selectedItems[0].itemName}"` : `${t('matchesFor') || 'Matches for'} ${selectedItems.length} items`}
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1 }}>
                         <Button size="small" onClick={toggleAllStores} sx={{ minWidth: 'auto', px: 1 }}>{expandedStores.length === Object.keys(groupedMatchesByStore).length ? <ExpandLess /> : <ExpandMore />}</Button>
-                        <IconButton size="small" onClick={() => { setSelectedItemIds([]); setItemMatches({}); }}><DeleteIcon sx={{ fontSize: '1.4rem' }} /></IconButton>
+                        <IconButton size="small" onClick={() => { setSelectedItemIds([]); setItemMatches({}); }}><DeleteIcon fontSize="small" /></IconButton>
                     </Box>
                 </Box>
-                {loadingMatches ? <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.1rem' }}>Loading...</Typography> : Object.keys(groupedMatchesByStore).length === 0 ? <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.1rem' }}>No matches found.</Typography> : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {loadingMatches ? <Box sx={{ p: 2 }}><Typography variant="body2" color="text.secondary">Loading...</Typography></Box> : Object.keys(groupedMatchesByStore).length === 0 ? <Box sx={{ p: 2 }}><Typography variant="body2" color="text.secondary">No matches found.</Typography></Box> : (
+                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                         {Object.entries(groupedMatchesByStore).map(([storeName, itemsWithMatches]) => {
                             const isExpanded = expandedStores.includes(storeName);
                             return (
-                                <Box key={storeName} sx={{ borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
-                                    <Box onClick={() => toggleStore(storeName)} sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', mb: 1, '&:hover': { opacity: 0.8 } }}>
+                                <Box key={storeName} sx={{ borderBottom: '1px solid', borderColor: 'divider', '&:last-child': { borderBottom: 'none' } }}>
+                                    <Box onClick={() => toggleStore(storeName)} sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', p: 1.5, '&:hover': { bgcolor: 'action.hover' } }}>
                                         <IconButton size="small" sx={{ p: 0, mr: 1 }}>{isExpanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}</IconButton>
-                                        <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 700, fontSize: '1.2rem', flexGrow: 1 }}>{storeName}</Typography>
+                                        <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>{storeName}</Typography>
                                     </Box>
                                     {!isExpanded && (
-                                        <Box sx={{ pl: 1 }}>
+                                        <Box sx={{ pl: 1, pb: 1 }}>
                                             <List dense disablePadding>
                                                 {itemsWithMatches.map(({ item, matches }) => {
                                                     const bestMatch = matches[0];
@@ -600,10 +554,10 @@ const ShoppingListPage = () => {
                                         </Box>
                                     )}
                                     <Collapse in={isExpanded} timeout="auto">
-                                        <Box sx={{ pl: 1 }}>
+                                        <Box sx={{ pl: 2, pb: 2, pr: 2 }}>
                                             {itemsWithMatches.map(({ item, matches }) => (
-                                                <Box key={item.id} sx={{ mb: itemsWithMatches.length > 1 ? 2 : 0, pl: itemsWithMatches.length > 1 ? 1 : 0, borderLeft: itemsWithMatches.length > 1 ? '2px solid rgba(103, 58, 183, 0.2)' : 'none' }}>
-                                                    {selectedItems.length > 1 && <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8, color: 'primary.main', fontSize: '1.05rem' }}>{item.itemName} ({item.quantity})</Typography>}
+                                                <Box key={item.id} sx={{ mb: itemsWithMatches.length > 1 ? 2 : 0, pl: itemsWithMatches.length > 1 ? 1 : 0, borderLeft: itemsWithMatches.length > 1 ? '2px solid' : 'none', borderColor: 'primary.main' }}>
+                                                    {selectedItems.length > 1 && <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5, color: 'primary.main' }}>{item.itemName} ({item.quantity})</Typography>}
                                                     <List dense disablePadding>
                                                         {(selectedItems.length > 1 ? matches.slice(0, 1) : matches).map((match, idx) => renderMatchItem(match, item, minTotalsPerItem[item.id], idx === 0))}
                                                     </List>
@@ -620,20 +574,34 @@ const ShoppingListPage = () => {
           )}
 
           {cheapestStore && selectedItemIds.length === 0 && (
-            <Paper elevation={0} sx={{ p: 2 }}>
-              <Typography variant="h6" sx={{ mb: 1, fontSize: '1.4rem' }}>{t('cheapestStore')}</Typography>
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>{t('cheapestStore')}</Typography>
               <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <Box>
-                  <Typography variant="h5" sx={{ fontSize: '1.5rem', fontWeight: 700 }}>{cheapestStore.name}</Typography>
+                  <Typography variant="h5">{cheapestStore.name}</Typography>
                   {cheapestStore.missing > 0 && <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>* {cheapestStore.missing} items missing (estimated)</Typography>}
                 </Box>
-                <Typography variant="h4" color="secondary.main" sx={{ fontWeight: 800, fontSize: '2rem' }}>₪{cheapestStore.total}</Typography>
+                <Typography variant="h4" color="secondary.main">₪{cheapestStore.total}</Typography>
               </Box>
               <List sx={{ p: 0 }}>
                 {cheapestStore.results.map((r: any, i: number) => (
                   <ListItem key={i} sx={{ px: 0, py: 1 }} divider={i < cheapestStore.results.length - 1}>
-                    <ListItemText primary={<Box sx={{ display: 'flex', alignItems: 'center' }}><Typography sx={{ fontSize: '1.1rem', fontWeight: 600 }}>{r.item.itemName}</Typography>{r.saleDetails && <span className="sale-indicator" onClick={() => setActiveSale(activeSale === i ? null : i)}><span className="exclamation-mark">!</span>{activeSale === i && <div className="sale-popup">{r.saleDetails}</div>}</span>}</Box>} secondary={r.name} secondaryTypographyProps={{ noWrap: true, variant: 'caption', sx: { fontSize: '0.9rem' } }} />
-                    <Typography variant="body1" sx={{ fontWeight: 700, ml: 2, textAlign: 'right', fontSize: '1.1rem' }}>{r.price}</Typography>
+                    <ListItemText 
+                        primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{r.item.itemName}</Typography>
+                                {r.saleDetails && (
+                                    <span className="sale-indicator" onClick={() => setActiveSale(activeSale === i ? null : i)}>
+                                        <span className="exclamation-mark">!</span>
+                                        {activeSale === i && <div className="sale-popup">{r.saleDetails}</div>}
+                                    </span>
+                                )}
+                            </Box>
+                        } 
+                        secondary={r.name} 
+                        secondaryTypographyProps={{ noWrap: true, variant: 'caption' }} 
+                    />
+                    <Typography variant="body1" sx={{ fontWeight: 700, ml: 2, textAlign: 'right' }}>{r.price}</Typography>
                   </ListItem>
                 ))}
               </List>
@@ -643,25 +611,11 @@ const ShoppingListPage = () => {
 
       {/* Main List (Now on the left in RTL grid, which visually is the RIGHT side) */}
       <Box dir="ltr" sx={{ textAlign: 'left' }}>
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" sx={{ mb: 1, fontSize: '2.5rem' }}>{t('myList')}</Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.2rem' }}>{t('myListDescription')}</Typography>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h4" sx={{ mb: 1 }}>{t('myList')}</Typography>
+          <Typography variant="body1" color="text.secondary">{t('myListDescription')}</Typography>
         </Box>
         
-        <Paper elevation={0} sx={{ p: 2, mb: 5, display: 'flex', gap: 2, alignItems: 'center', backgroundColor: theme.palette.mode === 'dark' ? 'rgba(40, 40, 40, 0.7)' : 'rgba(103, 58, 183, 0.15)' }}>
-          <Autocomplete
-            freeSolo
-            options={autocompleteOptions}
-            sx={{ flexGrow: 1 }}
-            value={newItemName}
-            onInputChange={(_, newInputValue) => setNewItemName(newInputValue)}
-            onKeyDown={(e) => e.key === 'Enter' && addItem()}
-            renderInput={(params) => <TextField {...params} placeholder={t('addItemPlaceholder')} variant="outlined" size="small" inputProps={{ ...params.inputProps, style: { fontSize: '1.2rem' } }} />}
-          />
-          <TextField type="number" value={newItemQuantity} onChange={(e) => setNewItemQuantity(Number(e.target.value))} onKeyDown={(e) => e.key === 'Enter' && addItem()} sx={{ width: '80px' }} size="small" inputProps={{ min: 1, style: { fontSize: '1.2rem' } }} />
-          <Button variant="contained" onClick={addItem} sx={{ py: 1.2, px: 4, fontSize: '1.2rem' }}>{t('add')}</Button>
-        </Paper>
-
         {notification && (
           <Box sx={{ position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'rgba(0, 0, 0, 0.8)', color: 'white', padding: '10px 20px', borderRadius: '8px', zIndex: 1500, animation: 'fadeInOut 5s forwards', overflow: 'hidden' }}>
             {notification}
@@ -671,16 +625,29 @@ const ShoppingListPage = () => {
 
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" sx={{ m: 0, fontSize: '1.6rem' }}>{t('itemsInCart')}</Typography>
+            <Typography variant="h6">{t('itemsInCart')}</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {isMultiSelect && <Button size="small" variant="text" onClick={() => { setSelectedItemIds(items.map(i => i.id)); items.forEach(i => !itemMatches[i.id] && handleItemClick(i)); }} sx={{ fontSize: '1rem', py: 0 }}>Select All</Button>}
-                <FormControlLabel control={<Switch size="small" checked={isMultiSelect} onChange={(e) => { setIsMultiSelect(e.target.checked); if (!e.target.checked) { setSelectedItemIds([]); setItemMatches({}); } }} />} label={<Typography variant="caption" sx={{ fontSize: '1rem' }}>Multi-Select</Typography>} />
+                {isMultiSelect && <Button size="small" variant="text" onClick={() => { setSelectedItemIds(items.map(i => i.id)); items.forEach(i => !itemMatches[i.id] && handleItemClick(i)); }}>Select All</Button>}
+                <FormControlLabel control={<Switch size="small" checked={isMultiSelect} onChange={(e) => { setIsMultiSelect(e.target.checked); if (!e.target.checked) { setSelectedItemIds([]); setItemMatches({}); } }} />} label={<Typography variant="caption">Multi-Select</Typography>} />
             </Box>
           </Box>
-          <Paper elevation={0}>
+          <Paper sx={{ overflow: 'hidden' }}>
             <List sx={{ p: 0 }} dense>
-              {items.map((item, index) => (
-                <ListItem key={item.id} divider={index < items.length - 1} selected={selectedItemIds.includes(item.id)} onClick={() => handleItemClick(item)} sx={{ px: 2, py: 1, bgcolor: selectedItemIds.includes(item.id) ? (theme.palette.mode === 'dark' ? 'rgba(90, 90, 90, 0.5)' : 'rgba(103, 58, 183, 0.25)') : (theme.palette.mode === 'dark' ? 'rgba(40, 40, 40, 0.7)' : 'rgba(103, 58, 183, 0.15)'), cursor: 'pointer', transition: 'background-color 0.2s', '&:hover': { bgcolor: theme.palette.mode === 'dark' ? 'rgba(60, 60, 60, 0.7)' : 'rgba(103, 58, 183, 0.2)' } }}>
+              {items.map((item, index) => {
+                const isSelected = selectedItemIds.includes(item.id);
+                return (
+                  <ListItem 
+                    key={item.id} 
+                    divider={index < items.length - 1} 
+                    onClick={() => handleItemClick(item)} 
+                    sx={{ 
+                        px: 2, 
+                        py: 1.5, 
+                        cursor: 'pointer',
+                        bgcolor: isSelected ? 'action.selected' : 'transparent',
+                        '&:hover': { bgcolor: isSelected ? 'action.selected' : 'action.hover' }
+                    }}
+                  >
                   {editingId === item.id ? (
                       <TextField
                         size="small"
@@ -693,31 +660,33 @@ const ShoppingListPage = () => {
                         autoFocus
                         onClick={(e) => e.stopPropagation()}
                         sx={{ flexGrow: 1, mr: 2 }}
-                        inputProps={{ style: { fontWeight: 600, fontSize: '1.3rem' } }}
+                        inputProps={{ style: { fontWeight: 600 } }}
                       />
                   ) : (
-                    <ListItemText primary={item.itemName} primaryTypographyProps={{ fontWeight: 600, fontSize: '1.3rem' }} sx={{ m: 0 }} />
+                    <ListItemText primary={item.itemName} primaryTypographyProps={{ fontWeight: 600 }} sx={{ m: 0 }} />
                   )}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
-                    <TextField type="number" value={item.quantity} onChange={(e) => updateItemQuantity(item.id, Number(e.target.value))} onClick={(e) => e.stopPropagation()} sx={{ width: '60px' }} size="small" inputProps={{ min: 1, style: { padding: '4px 6px', fontSize: '1.2rem', textAlign: 'center' } }} />
+                    <TextField type="number" value={item.quantity} onChange={(e) => updateItemQuantity(item.id, Number(e.target.value))} onClick={(e) => e.stopPropagation()} sx={{ width: '60px' }} size="small" inputProps={{ min: 1, style: { padding: '4px 8px', textAlign: 'center' } }} />
                     {editingId === item.id ? (
                         <IconButton size="small" onClick={(e) => { e.stopPropagation(); updateItemName(item.id, editingName); }} color="primary">
-                            <SaveIcon sx={{ fontSize: '1.6rem' }} />
+                            <SaveIcon fontSize="small" />
                         </IconButton>
                     ) : (
                         <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEditingId(item.id); setEditingName(item.itemName); }} sx={{ color: 'text.secondary' }}>
-                            <EditIcon sx={{ fontSize: '1.6rem' }} />
+                            <EditIcon fontSize="small" />
                         </IconButton>
                     )}
-                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' }}}><DeleteIcon sx={{ fontSize: '1.6rem' }} /></IconButton>
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' }}}><DeleteIcon fontSize="small" /></IconButton>
                   </Box>
                 </ListItem>
-              ))}
+                );
+              })}
               {items.length === 0 && <Box sx={{ p: 4, textAlign: 'center' }}><Typography color="text.secondary">{t('emptyList')}</Typography></Box>}
             </List>
           </Paper>
         </Box>
       </Box>
+      <AddItemFAB onAdd={addItem} autocompleteOptions={autocompleteOptions} />
     </Box>
   );
 };
