@@ -20,4 +20,5 @@
 ## Development Tools
 - **Process Manager:** Concurrently (running client/server in parallel)
 - **Environment:** Dotenv
+- **UI Interactions:** Framer Motion (animations), React Swipeable List (mobile interactions).
 - **Utilities:** Axios (HTTP client), Date-fns (date manipulation), Lucide-react (icons).

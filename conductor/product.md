@@ -17,7 +17,10 @@ The user wants to build a Shopping List application with integrated price scrapi
 - **Real-time Synchronization:** Use WebSockets to ensure all participants in a shared list see updates instantly.
 
 ## User Experience (UX)
-- **Efficient Input:** A fast, auto-completing search bar that provides immediate price suggestions as the user types.
+- **Modern Navigation:** A persistent bottom navigation bar for quick access to core features on mobile.
+- **Interactive List:** Mobile-first interactions including swipe-to-delete and swipe-to-toggle for efficient list management.
+- **Data Visualization:** Summary cards and color-coded highlighting to provide immediate insights into price comparisons.
+- **Efficient Input:** A Floating Action Button (FAB) that opens a focused input sheet for adding items quickly.
 
 ## Data Strategy
 - **Accuracy & Freshness:** Implement scheduled daily re-scrapes and heuristic-based validation to detect and handle pricing outliers or scraping errors.
