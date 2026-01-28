@@ -22,51 +22,12 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { AppContext } from './AppContext';
 import { useTranslation } from './useTranslation';
+import BottomNav from './components/BottomNav';
 
 import ShoppingListPage from './pages/ShoppingListPage';
 import SettingsPage from './pages/SettingsPage';
 import ComparisonPage from './pages/ComparisonPage';
 import { ScrapedDataPage } from './pages/ScrapedDataPage';
-
-function Navigation() {
-  const location = useLocation();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { t } = useTranslation();
-
-  if (!isMobile) return null;
-
-  return (
-    <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1000, borderRadius: 0 }} elevation={3}>
-      <BottomNavigation
-        value={location.pathname}
-        showLabels
-      >
-        <BottomNavigationAction 
-          label={t('list')} 
-          value="/" 
-          icon={<ShoppingCartIcon />} 
-          component={Link} 
-          to="/" 
-        />
-        <BottomNavigationAction 
-          label={t('compare')} 
-          value="/comparison" 
-          icon={<CompareArrowsIcon />} 
-          component={Link} 
-          to="/comparison" 
-        />
-        <BottomNavigationAction 
-          label={t('settings')} 
-          value="/settings" 
-          icon={<SettingsIcon />} 
-          component={Link} 
-          to="/settings" 
-        />
-      </BottomNavigation>
-    </Paper>
-  );
-}
 
 function DesktopNavigationButtons() {
   const location = useLocation();
@@ -120,7 +81,7 @@ function App() {
 
   return (
     <Router>
-      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', color: 'text.primary' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', color: 'text.primary', pb: isMobile ? '56px' : 0 }}>
           <AppBar position="sticky" elevation={0} sx={{ 
             bgcolor: (theme) => theme.palette.background.paper,
             backdropFilter: 'blur(2px)' 
@@ -158,7 +119,7 @@ function App() {
             </Routes>
           </Box>
 
-          <Navigation />
+          <BottomNav />
         </Box>
     </Router>
   );
