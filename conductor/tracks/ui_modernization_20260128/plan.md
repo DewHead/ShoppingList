@@ -12,10 +12,10 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Navigation & Layout Foundation' (Protocol in workflow.md)
 
 ## Phase 2: Shopping List Page Modernization
-- [ ] Task: Floating Action Button (FAB) for adding items
-    - [ ] Write tests for FAB interaction and Add Item dialog.
-    - [ ] Implement `AddItemFAB` component.
-    - [ ] Create Bottom Sheet / Modal for item input (replacing top search bar).
+- [x] Task: Floating Action Button (FAB) for adding items cd32bdb
+    - [x] Write tests for FAB interaction and Add Item dialog.
+    - [x] Implement `AddItemFAB` component.
+    - [x] Create Bottom Sheet / Modal for item input (replacing top search bar).
 - [ ] Task: Interactive List Rows
     - [ ] Write integration tests for swipe interactions (using `react-swipeable-list` or similar).
     - [ ] Implement Swipe-to-Delete functionality.
