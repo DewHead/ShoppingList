@@ -13,9 +13,9 @@
 - [x] Task: Implement Rami Levy Scraper 02fe3c1
     - [x] Write tests for Rami Levy site navigation.
     - [x] Implement item search and price extraction for Rami Levy.
-- [ ] Task: Database Integration
-    - [ ] Ensure `db.js` supports storing retailer-specific metadata.
-    - [ ] Update populate scripts to handle multiple sources.
+- [x] Task: Database Integration 260b47f
+    - [x] Ensure db.js supports storing retailer-specific metadata.
+    - [x] Update populate scripts to handle multiple sources.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Multi-Retailer Support' (Protocol in workflow.md)
 
 ## Phase 3: Validation & UI
