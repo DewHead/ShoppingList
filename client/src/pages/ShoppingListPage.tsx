@@ -538,95 +538,6 @@ const ShoppingListPage = () => {
             pb: 10 // Extra padding for FAB
         }}
     >
-      {/* Side Panel */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {selectedItemIds.length > 0 && (
-            <Paper sx={{ p: 0, overflow: 'hidden' }}>
-                <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
-                    <Typography variant="h6" sx={{ fontSize: '1.1rem' }}>
-                        {selectedItems.length === 1 ? `${t('matchesFor')} "${selectedItems[0].itemName}"` : `${t('matchesFor')} ${selectedItems.length} items`}
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Button size="small" onClick={toggleAllStores} sx={{ minWidth: 'auto', px: 1 }}>{expandedStores.length === Object.keys(groupedMatchesByStore).length ? <ExpandLess /> : <ExpandMore />}</Button>
-                        <IconButton size="small" onClick={() => { setSelectedItemIds([]); setItemMatches({}); }}><DeleteIcon fontSize="small" /></IconButton>
-                    </Box>
-                </Box>
-                {loadingMatches ? <Box sx={{ p: 2 }}><Typography variant="body2" color="text.secondary">Loading...</Typography></Box> : Object.keys(groupedMatchesByStore).length === 0 ? <Box sx={{ p: 2 }}><Typography variant="body2" color="text.secondary">No matches found.</Typography></Box> : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                        {Object.entries(groupedMatchesByStore).map(([storeName, itemsWithMatches]) => {
-                            const isExpanded = expandedStores.includes(storeName);
-                            return (
-                                <Box key={storeName} sx={{ borderBottom: '1px solid', borderColor: 'divider', '&:last-child': { borderBottom: 'none' } }}>
-                                    <Box onClick={() => toggleStore(storeName)} sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', p: 1.5, '&:hover': { bgcolor: 'action.hover' } }}>
-                                        <IconButton size="small" sx={{ p: 0, mr: 1 }}>{isExpanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}</IconButton>
-                                        <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>{storeName}</Typography>
-                                    </Box>
-                                    {!isExpanded && (
-                                        <Box sx={{ pl: 1, pb: 1 }}>
-                                            <List dense disablePadding>
-                                                {itemsWithMatches.map(({ item, matches }) => {
-                                                    const bestMatch = matches[0];
-                                                    return bestMatch ? renderMatchItem(bestMatch, item, minTotalsPerItem[item.id], true) : null;
-                                                })}
-                                            </List>
-                                        </Box>
-                                    )}
-                                    <Collapse in={isExpanded} timeout="auto">
-                                        <Box sx={{ pl: 2, pb: 2, pr: 2 }}>
-                                            {itemsWithMatches.map(({ item, matches }) => (
-                                                <Box key={item.id} sx={{ mb: itemsWithMatches.length > 1 ? 2 : 0, pl: itemsWithMatches.length > 1 ? 1 : 0, borderLeft: itemsWithMatches.length > 1 ? '2px solid' : 'none', borderColor: 'primary.main' }}>
-                                                    {selectedItems.length > 1 && <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5, color: 'primary.main' }}>{item.itemName} ({item.quantity})</Typography>}
-                                                    <List dense disablePadding>
-                                                        {(selectedItems.length > 1 ? matches.slice(0, 1) : matches).map((match, idx) => renderMatchItem(match, item, minTotalsPerItem[item.id], idx === 0))}
-                                                    </List>
-                                                </Box>
-                                            ))}
-                                        </Box>
-                                    </Collapse>
-                                </Box>
-                            );
-                        })}
-                    </Box>
-                )}
-            </Paper>
-          )}
-
-          {cheapestStore && selectedItemIds.length === 0 && (
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>{t('cheapestStore')}</Typography>
-              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <Box>
-                  <Typography variant="h5">{cheapestStore.name}</Typography>
-                  {cheapestStore.missing > 0 && <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>* {cheapestStore.missing} items missing (estimated)</Typography>}
-                </Box>
-                <Typography variant="h4" color="secondary.main">₪{cheapestStore.total}</Typography>
-              </Box>
-              <List sx={{ p: 0 }}>
-                {cheapestStore.results.map((r: any, i: number) => (
-                  <ListItem key={i} sx={{ px: 0, py: 1 }} divider={i < cheapestStore.results.length - 1}>
-                    <ListItemText 
-                        primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{r.item.itemName}</Typography>
-                                {r.saleDetails && (
-                                    <span className="sale-indicator" onClick={() => setActiveSale(activeSale === i ? null : i)}>
-                                        <span className="exclamation-mark">!</span>
-                                        {activeSale === i && <div className="sale-popup">{r.saleDetails}</div>}
-                                    </span>
-                                )}
-                            </Box>
-                        } 
-                        secondary={r.name} 
-                        secondaryTypographyProps={{ noWrap: true, variant: 'caption' }} 
-                    />
-                    <Typography variant="body1" sx={{ fontWeight: 700, ml: 2, textAlign: 'right' }}>{r.price}</Typography>
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
-          )}
-      </Box>
-
       {/* Main List */}
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ mb: 3 }}>
@@ -767,6 +678,95 @@ const ShoppingListPage = () => {
             {items.length === 0 && <Box sx={{ p: 4, textAlign: 'center' }}><Typography color="text.secondary">{t('emptyList')}</Typography></Box>}
           </Paper>
         </Box>
+      </Box>
+
+      {/* Side Panel */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {selectedItemIds.length > 0 && (
+            <Paper sx={{ p: 0, overflow: 'hidden' }}>
+                <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <Typography variant="h6" sx={{ fontSize: '1.1rem' }}>
+                        {selectedItems.length === 1 ? `${t('matchesFor')} "${selectedItems[0].itemName}"` : `${t('matchesFor')} ${selectedItems.length} items`}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button size="small" onClick={toggleAllStores} sx={{ minWidth: 'auto', px: 1 }}>{expandedStores.length === Object.keys(groupedMatchesByStore).length ? <ExpandLess /> : <ExpandMore />}</Button>
+                        <IconButton size="small" onClick={() => { setSelectedItemIds([]); setItemMatches({}); }}><DeleteIcon fontSize="small" /></IconButton>
+                    </Box>
+                </Box>
+                {loadingMatches ? <Box sx={{ p: 2 }}><Typography variant="body2" color="text.secondary">Loading...</Typography></Box> : Object.keys(groupedMatchesByStore).length === 0 ? <Box sx={{ p: 2 }}><Typography variant="body2" color="text.secondary">No matches found.</Typography></Box> : (
+                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        {Object.entries(groupedMatchesByStore).map(([storeName, itemsWithMatches]) => {
+                            const isExpanded = expandedStores.includes(storeName);
+                            return (
+                                <Box key={storeName} sx={{ borderBottom: '1px solid', borderColor: 'divider', '&:last-child': { borderBottom: 'none' } }}>
+                                    <Box onClick={() => toggleStore(storeName)} sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', p: 1.5, '&:hover': { bgcolor: 'action.hover' } }}>
+                                        <IconButton size="small" sx={{ p: 0, mr: 1 }}>{isExpanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}</IconButton>
+                                        <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>{storeName}</Typography>
+                                    </Box>
+                                    {!isExpanded && (
+                                        <Box sx={{ pl: 1, pb: 1 }}>
+                                            <List dense disablePadding>
+                                                {itemsWithMatches.map(({ item, matches }) => {
+                                                    const bestMatch = matches[0];
+                                                    return bestMatch ? renderMatchItem(bestMatch, item, minTotalsPerItem[item.id], true) : null;
+                                                })}
+                                            </List>
+                                        </Box>
+                                    )}
+                                    <Collapse in={isExpanded} timeout="auto">
+                                        <Box sx={{ pl: 2, pb: 2, pr: 2 }}>
+                                            {itemsWithMatches.map(({ item, matches }) => (
+                                                <Box key={item.id} sx={{ mb: itemsWithMatches.length > 1 ? 2 : 0, pl: itemsWithMatches.length > 1 ? 1 : 0, borderLeft: itemsWithMatches.length > 1 ? '2px solid' : 'none', borderColor: 'primary.main' }}>
+                                                    {selectedItems.length > 1 && <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5, color: 'primary.main' }}>{item.itemName} ({item.quantity})</Typography>}
+                                                    <List dense disablePadding>
+                                                        {(selectedItems.length > 1 ? matches.slice(0, 1) : matches).map((match, idx) => renderMatchItem(match, item, minTotalsPerItem[item.id], idx === 0))}
+                                                    </List>
+                                                </Box>
+                                            ))}
+                                        </Box>
+                                    </Collapse>
+                                </Box>
+                            );
+                        })}
+                    </Box>
+                )}
+            </Paper>
+          )}
+
+          {cheapestStore && selectedItemIds.length === 0 && (
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>{t('cheapestStore')}</Typography>
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <Box>
+                  <Typography variant="h5">{cheapestStore.name}</Typography>
+                  {cheapestStore.missing > 0 && <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>* {cheapestStore.missing} items missing (estimated)</Typography>}
+                </Box>
+                <Typography variant="h4" color="secondary.main">₪{cheapestStore.total}</Typography>
+              </Box>
+              <List sx={{ p: 0 }}>
+                {cheapestStore.results.map((r: any, i: number) => (
+                  <ListItem key={i} sx={{ px: 0, py: 1 }} divider={i < cheapestStore.results.length - 1}>
+                    <ListItemText 
+                        primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{r.item.itemName}</Typography>
+                                {r.saleDetails && (
+                                    <span className="sale-indicator" onClick={() => setActiveSale(activeSale === i ? null : i)}>
+                                        <span className="exclamation-mark">!</span>
+                                        {activeSale === i && <div className="sale-popup">{r.saleDetails}</div>}
+                                    </span>
+                                )}
+                            </Box>
+                        } 
+                        secondary={r.name} 
+                        secondaryTypographyProps={{ noWrap: true, variant: 'caption' }} 
+                    />
+                    <Typography variant="body1" sx={{ fontWeight: 700, ml: 2, textAlign: 'right' }}>{r.price}</Typography>
+                  </ListItem>
+                ))}
+              </List>
+            </Paper>
+          )}
       </Box>
       <AddItemFAB onAdd={addItem} autocompleteOptions={autocompleteOptions} />
     </Box>
