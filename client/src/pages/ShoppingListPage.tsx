@@ -9,19 +9,18 @@ import {
   ListItemText, 
   IconButton, 
   Paper,
-  Autocomplete,
-  Tooltip,
   Switch,
   FormControlLabel,
-  Collapse
+  SwipeableDrawer,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import CheckIcon from '@mui/icons-material/Check';
 import UndoIcon from '@mui/icons-material/Undo';
-import { PushPin, PushPinOutlined, ExpandMore, ExpandLess } from '@mui/icons-material';
-import { AlertCircle } from 'lucide-react';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import {
   SwipeableList,
   SwipeableListItem,
@@ -36,6 +35,8 @@ import { io } from 'socket.io-client';
 import { useTranslation } from '../useTranslation';
 import { API_BASE_URL } from '../config';
 import AddItemFAB from '../components/AddItemFAB';
+import ShoppingListSidePanel from '../components/ShoppingListSidePanel';
+import { calculateBestPrice } from '../utils/comparisonUtils';
 import './ShoppingListPage.css';
 
 const socket = io(API_BASE_URL);
@@ -68,73 +69,17 @@ const toHebrew = (str: string) => {
   return str.split('').map(char => map[char.toLowerCase()] || char).join('');
 };
 
-const calculateBestPrice = (match: SearchResult, quantity: number) => {
-  const unitPrice = match.price;
-  const originalTotal = unitPrice * quantity;
-  let bestResult = { total: originalTotal, isPromo: false, originalTotal, displayName: match.remote_name };
-  
-  if (!match.promo_description) {
-      return bestResult;
-  }
-
-  const promoList = match.promo_description.split(' | ');
-  
-  promoList.forEach(promoDesc => {
-      const parts = promoDesc.split(/\s+ב-?\s*₪?/);
-      if (parts.length >= 2) {
-          const lastPart = parts[parts.length - 1];
-          const priceMatch = lastPart.match(/^[\d.]+/);
-          
-          if (priceMatch) {
-              const promoPrice = parseFloat(priceMatch[0]);
-              const namePart = parts.slice(0, -1).join(' ב ').trim();
-              const qtyMatch = namePart.match(/\s(\d+)$/);
-              
-              let currentTotal = originalTotal;
-
-              if (qtyMatch && parseInt(qtyMatch[1]) > 1) {
-                  const requiredQty = parseInt(qtyMatch[1]);
-                  const cleanedName = namePart.replace(/\s+\d+$/, '').trim();
-                  if (quantity >= requiredQty) {
-                      const promoGroups = Math.floor(quantity / requiredQty);
-                      const remaining = quantity % requiredQty;
-                      currentTotal = (promoGroups * promoPrice) + (remaining * unitPrice);
-                      
-                      if (currentTotal < bestResult.total) {
-                          bestResult = { 
-                              total: currentTotal, 
-                              isPromo: true, 
-                              originalTotal, 
-                              displayName: cleanedName || bestResult.displayName 
-                          };
-                      }
-                  }
-              } else {
-                  const currentTotal = promoPrice * quantity;
-                  if (currentTotal < bestResult.total) {
-                      bestResult = { 
-                          total: currentTotal, 
-                          isPromo: true, 
-                          originalTotal, 
-                          displayName: namePart || bestResult.displayName 
-                      };
-                  }
-              }
-          }
-      }
-  });
-  
-  return bestResult;
-};
-
 const ShoppingListPage = () => {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   const [items, setItems] = useState<ShoppingListItem[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
   const [storeResults, setStoreResults] = useState<Record<number, any[]>>({});
   const [supermarkets, setSupermarkets] = useState<any[]>([]);
   const [activeSale, setActiveSale] = useState<number | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   
   const [isMultiSelect, setIsMultiSelect] = useState(false);
   const [selectedItemIds, setSelectedItemIds] = useState<number[]>([]);
@@ -422,120 +367,27 @@ const ShoppingListPage = () => {
     return stores;
   }, [selectedItems, itemMatches]);
 
-  const getPromoMessage = (promo: string, currentQty: number) => {
-    if (!promo) return null;
-    const promos = promo.split(' | ');
-    return (
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            {promos.map((p, i) => {
-                const countPattern = /^(\d+)\s+ב-?\s*₪?([\d.]+)/;
-                const match = p.match(countPattern);
-                let message = p;
-                if (match) {
-                    const requiredQty = parseInt(match[1]);
-                    const price = match[2];
-                    if (currentQty < requiredQty) {
-                        message = `Add ${requiredQty - currentQty} more to get ${requiredQty} for ₪${price}`;
-                    }
-                }
-                return (
-                    <Box key={i} sx={{ borderBottom: i < promos.length - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none', py: 0.5 }}>
-                        {message}
-                    </Box>
-                );
-            })}
-        </Box>
-    );
-  };
-
-  const renderMatchItem = (match: SearchResult, item: ShoppingListItem, minTotal: number, isTopMatch: boolean) => {
-    const { total, isPromo, originalTotal, displayName } = calculateBestPrice(match, item.quantity);
-    const isOverallCheapest = Math.abs(total - minTotal) < 0.01;
-    const isStoreCheapest = isTopMatch && !isOverallCheapest;
-    
-    let priceColor = 'error.main'; 
-    if (isOverallCheapest) priceColor = 'success.main';
-    else if (isStoreCheapest) priceColor = 'warning.main';
-
-    const currentBestMatchForStore = storeResults[match.supermarket_id]?.find((r: any) => String(r.item.id) === String(item.id));
-    
-    const isPinned = !!currentBestMatchForStore?.is_pinned && 
-                     String(currentBestMatchForStore.remote_id) === String(match.remote_id);
-    
-    return (
-        <ListItem key={`${match.supermarket_id}-${match.remote_id}-${item.id}`} disableGutters sx={{ py: 0.5 }}>
-            <ListItemText 
-                primary={
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
-                                {displayName}
-                            </Typography>
-                            {match.promo_description && (() => {
-                                const isSbox = match.promo_description.includes('SBOX');
-                                if (!isSbox) return true;
-                                const storeSetting = localStorage.getItem(`showCreditCardPromos_${match.supermarket_id}`);
-                                return storeSetting ? JSON.parse(storeSetting) : false;
-                            })() && (
-                                <Tooltip title={getPromoMessage(match.promo_description, item.quantity)} arrow placement="top">
-                                    <Box sx={{ display: 'inline-flex', color: 'primary.main', cursor: 'help' }}><AlertCircle size={16} /></Box>
-                                </Tooltip>
-                            )}
-                        </Box>
-                        {displayName !== match.remote_name && (
-                            <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.1 }}>
-                                {match.remote_name}
-                            </Typography>
-                        )}
-                    </Box>
-                } 
-                primaryTypographyProps={{ component: 'div' }}
-            />
-            <Box sx={{ textAlign: 'right', ml: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <IconButton 
-                    size="small" 
-                    onClick={(e) => { 
-                        e.stopPropagation(); 
-                        handlePinItem(item.id, match.supermarket_id, match.remote_id, isPinned); 
-                    }}
-                    color={isPinned ? "primary" : "default"}
-                    sx={{ p: 0.5 }}
-                >
-                    {isPinned ? <PushPin fontSize="small" /> : <PushPinOutlined fontSize="small" />}
-                </IconButton>
-                <Typography variant="caption" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
-                    ₪{match.price.toFixed(2)}
-                </Typography>
-                <Box sx={{ minWidth: '60px', textAlign: 'right' }}>
-                    {isPromo && (
-                        <Typography variant="caption" sx={{ textDecoration: 'line-through', color: 'text.secondary', display: 'block', lineHeight: 1 }}>
-                            ₪{originalTotal.toFixed(2)}
-                        </Typography>
-                    )}
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: priceColor }}>
-                        ₪{total.toFixed(2)}
-                    </Typography>
-                </Box>
-            </Box>
-        </ListItem>
-    );
+  const clearSelection = () => {
+    setSelectedItemIds([]);
+    setItemMatches({});
   };
 
   const hasSidePanel = !!cheapestStore || selectedItemIds.length > 0;
 
   return (
     <Box 
-        sx={hasSidePanel ? { 
+        data-testid="shopping-list-container"
+        sx={(!isMobile && hasSidePanel) ? { 
             display: 'grid', 
-            gridTemplateColumns: { md: '1fr 1fr' }, 
-            gap: 4, 
-            maxWidth: '1200px',
+            gridTemplateColumns: { md: '1.6fr 1fr' }, 
+            gap: { xs: 3, md: 6 }, 
+            maxWidth: '1400px',
             mx: 'auto',
             pb: 10 // Extra padding for FAB
         } : { 
             maxWidth: '800px', 
             mx: 'auto',
-            pb: 10 // Extra padding for FAB
+            pb: (isMobile && hasSidePanel) ? 20 : 10 // Extra padding for FAB + Summary Bar
         }}
     >
       {/* Main List */}
@@ -680,95 +532,119 @@ const ShoppingListPage = () => {
         </Box>
       </Box>
 
-      {/* Side Panel */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {selectedItemIds.length > 0 && (
-            <Paper sx={{ p: 0, overflow: 'hidden' }}>
-                <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
-                    <Typography variant="h6" sx={{ fontSize: '1.1rem' }}>
-                        {selectedItems.length === 1 ? `${t('matchesFor')} "${selectedItems[0].itemName}"` : `${t('matchesFor')} ${selectedItems.length} items`}
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Button size="small" onClick={toggleAllStores} sx={{ minWidth: 'auto', px: 1 }}>{expandedStores.length === Object.keys(groupedMatchesByStore).length ? <ExpandLess /> : <ExpandMore />}</Button>
-                        <IconButton size="small" onClick={() => { setSelectedItemIds([]); setItemMatches({}); }}><DeleteIcon fontSize="small" /></IconButton>
-                    </Box>
-                </Box>
-                {loadingMatches ? <Box sx={{ p: 2 }}><Typography variant="body2" color="text.secondary">Loading...</Typography></Box> : Object.keys(groupedMatchesByStore).length === 0 ? <Box sx={{ p: 2 }}><Typography variant="body2" color="text.secondary">No matches found.</Typography></Box> : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                        {Object.entries(groupedMatchesByStore).map(([storeName, itemsWithMatches]) => {
-                            const isExpanded = expandedStores.includes(storeName);
-                            return (
-                                <Box key={storeName} sx={{ borderBottom: '1px solid', borderColor: 'divider', '&:last-child': { borderBottom: 'none' } }}>
-                                    <Box onClick={() => toggleStore(storeName)} sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', p: 1.5, '&:hover': { bgcolor: 'action.hover' } }}>
-                                        <IconButton size="small" sx={{ p: 0, mr: 1 }}>{isExpanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}</IconButton>
-                                        <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>{storeName}</Typography>
-                                    </Box>
-                                    {!isExpanded && (
-                                        <Box sx={{ pl: 1, pb: 1 }}>
-                                            <List dense disablePadding>
-                                                {itemsWithMatches.map(({ item, matches }) => {
-                                                    const bestMatch = matches[0];
-                                                    return bestMatch ? renderMatchItem(bestMatch, item, minTotalsPerItem[item.id], true) : null;
-                                                })}
-                                            </List>
-                                        </Box>
-                                    )}
-                                    <Collapse in={isExpanded} timeout="auto">
-                                        <Box sx={{ pl: 2, pb: 2, pr: 2 }}>
-                                            {itemsWithMatches.map(({ item, matches }) => (
-                                                <Box key={item.id} sx={{ mb: itemsWithMatches.length > 1 ? 2 : 0, pl: itemsWithMatches.length > 1 ? 1 : 0, borderLeft: itemsWithMatches.length > 1 ? '2px solid' : 'none', borderColor: 'primary.main' }}>
-                                                    {selectedItems.length > 1 && <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5, color: 'primary.main' }}>{item.itemName} ({item.quantity})</Typography>}
-                                                    <List dense disablePadding>
-                                                        {(selectedItems.length > 1 ? matches.slice(0, 1) : matches).map((match, idx) => renderMatchItem(match, item, minTotalsPerItem[item.id], idx === 0))}
-                                                    </List>
-                                                </Box>
-                                            ))}
-                                        </Box>
-                                    </Collapse>
-                                </Box>
-                            );
-                        })}
-                    </Box>
-                )}
-            </Paper>
-          )}
+      {/* Desktop Side Panel */}
+      {!isMobile && hasSidePanel && (
+        <Box sx={{ position: 'sticky', top: 84, alignSelf: 'start' }}>
+          <ShoppingListSidePanel 
+            selectedItemIds={selectedItemIds}
+            selectedItems={selectedItems}
+            cheapestStore={cheapestStore}
+            groupedMatchesByStore={groupedMatchesByStore}
+            loadingMatches={loadingMatches}
+            expandedStores={expandedStores}
+            toggleStore={toggleStore}
+            toggleAllStores={toggleAllStores}
+            clearSelection={clearSelection}
+            handlePinItem={handlePinItem}
+            minTotalsPerItem={minTotalsPerItem}
+            storeResults={storeResults}
+            activeSale={activeSale}
+            setActiveSale={setActiveSale}
+          />
+        </Box>
+      )}
 
-          {cheapestStore && selectedItemIds.length === 0 && (
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>{t('cheapestStore')}</Typography>
-              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+      {/* Mobile Drawer & Summary Bar */}
+      {isMobile && hasSidePanel && (
+          <>
+             {/* Summary Bar */}
+             <Paper 
+                onClick={() => setDrawerOpen(true)}
+                elevation={10}
+                sx={{ 
+                    position: 'fixed', 
+                    bottom: 56, // Height of BottomNav
+                    left: 0, 
+                    right: 0, 
+                    p: 2, 
+                    bgcolor: 'background.paper',
+                    color: 'text.primary',
+                    zIndex: 1000,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderTopLeftRadius: 16,
+                    borderTopRightRadius: 16,
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                    boxShadow: '0px -4px 10px rgba(0,0,0,0.05)'
+                }}
+             >
                 <Box>
-                  <Typography variant="h5">{cheapestStore.name}</Typography>
-                  {cheapestStore.missing > 0 && <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>* {cheapestStore.missing} items missing (estimated)</Typography>}
+                    <Typography variant="caption" sx={{ opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+                        {cheapestStore ? t('cheapestStore') : t('matchesFor')}
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
+                        {cheapestStore ? cheapestStore.name : `${selectedItems.length} items`}
+                    </Typography>
                 </Box>
-                <Typography variant="h4" color="secondary.main">₪{cheapestStore.total}</Typography>
-              </Box>
-              <List sx={{ p: 0 }}>
-                {cheapestStore.results.map((r: any, i: number) => (
-                  <ListItem key={i} sx={{ px: 0, py: 1 }} divider={i < cheapestStore.results.length - 1}>
-                    <ListItemText 
-                        primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{r.item.itemName}</Typography>
-                                {r.saleDetails && (
-                                    <span className="sale-indicator" onClick={() => setActiveSale(activeSale === i ? null : i)}>
-                                        <span className="exclamation-mark">!</span>
-                                        {activeSale === i && <div className="sale-popup">{r.saleDetails}</div>}
-                                    </span>
-                                )}
-                            </Box>
-                        } 
-                        secondary={r.name} 
-                        secondaryTypographyProps={{ noWrap: true, variant: 'caption' }} 
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                     {cheapestStore && <Typography variant="h5" sx={{ fontWeight: 800, color: 'primary.main' }}>₪{cheapestStore.total}</Typography>}
+                     <IconButton size="small" sx={{ bgcolor: 'action.hover' }}>
+                        <KeyboardArrowUpIcon />
+                     </IconButton>
+                </Box>
+             </Paper>
+
+             <SwipeableDrawer
+                anchor="bottom"
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                onOpen={() => setDrawerOpen(true)}
+                disableSwipeToOpen={false}
+                PaperProps={{
+                    sx: {
+                        height: '85vh',
+                        borderTopLeftRadius: 24,
+                        borderTopRightRadius: 24,
+                        p: 0,
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column'
+                    }
+                }}
+             >
+                 <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }} onClick={() => setDrawerOpen(false)}>
+                    <Box sx={{ width: 40, height: 5, bgcolor: 'divider', borderRadius: 3 }} />
+                 </Box>
+                 <Box sx={{ overflowY: 'auto', px: 3, pb: 4, flex: 1 }}>
+                    <ShoppingListSidePanel 
+                        selectedItemIds={selectedItemIds}
+                        selectedItems={selectedItems}
+                        cheapestStore={cheapestStore}
+                        groupedMatchesByStore={groupedMatchesByStore}
+                        loadingMatches={loadingMatches}
+                        expandedStores={expandedStores}
+                        toggleStore={toggleStore}
+                        toggleAllStores={toggleAllStores}
+                        clearSelection={clearSelection}
+                        handlePinItem={handlePinItem}
+                        minTotalsPerItem={minTotalsPerItem}
+                        storeResults={storeResults}
+                        activeSale={activeSale}
+                        setActiveSale={setActiveSale}
                     />
-                    <Typography variant="body1" sx={{ fontWeight: 700, ml: 2, textAlign: 'right' }}>{r.price}</Typography>
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
-          )}
-      </Box>
-      <AddItemFAB onAdd={addItem} autocompleteOptions={autocompleteOptions} />
+                 </Box>
+             </SwipeableDrawer>
+          </>
+      )}
+
+      <AddItemFAB 
+        onAdd={addItem} 
+        autocompleteOptions={autocompleteOptions} 
+        sx={isMobile && hasSidePanel ? { bottom: 140 } : undefined}
+      />
     </Box>
   );
 };

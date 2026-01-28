@@ -44,3 +44,63 @@ export const calculateSmartTotal = (results: ComparisonResult[] | undefined) => 
     isValid 
   };
 };
+
+export const calculateBestPrice = (match: any, quantity: number) => {
+  const unitPrice = match.price;
+  const originalTotal = unitPrice * quantity;
+  let bestResult = { total: originalTotal, isPromo: false, originalTotal, displayName: match.remote_name };
+  
+  if (!match.promo_description) {
+      return bestResult;
+  }
+
+  const promoList = match.promo_description.split(' | ');
+  
+  promoList.forEach((promoDesc: string) => {
+      const parts = promoDesc.split(/\s+ב-?\s*₪?/);
+      if (parts.length >= 2) {
+          const lastPart = parts[parts.length - 1];
+          const priceMatch = lastPart.match(/^[\d.]+/);
+          
+          if (priceMatch) {
+              const promoPrice = parseFloat(priceMatch[0]);
+              const namePart = parts.slice(0, -1).join(' ב ').trim();
+              const qtyMatch = namePart.match(/\s(\d+)$/);
+              
+              let currentTotal = originalTotal;
+
+              if (qtyMatch && parseInt(qtyMatch[1]) > 1) {
+                  const requiredQty = parseInt(qtyMatch[1]);
+                  const cleanedName = namePart.replace(/\s+\d+$/, '').trim();
+                  if (quantity >= requiredQty) {
+                      const promoGroups = Math.floor(quantity / requiredQty);
+                      const remaining = quantity % requiredQty;
+                      currentTotal = (promoGroups * promoPrice) + (remaining * unitPrice);
+                      
+                      if (currentTotal < bestResult.total) {
+                          bestResult = { 
+                              total: currentTotal, 
+                              isPromo: true, 
+                              originalTotal, 
+                              displayName: cleanedName || bestResult.displayName 
+                          };
+                      }
+                  }
+              } else {
+                  const currentTotal = promoPrice * quantity;
+                  if (currentTotal < bestResult.total) {
+                      bestResult = { 
+                          total: currentTotal, 
+                          isPromo: true, 
+                          originalTotal, 
+                          displayName: namePart || bestResult.displayName 
+                      };
+                  }
+              }
+          }
+      }
+  });
+  
+  return bestResult;
+};
+

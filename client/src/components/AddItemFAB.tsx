@@ -16,9 +16,10 @@ import { useTranslation } from '../useTranslation';
 interface AddItemFABProps {
   onAdd: (name: string, quantity: number) => void;
   autocompleteOptions: string[];
+  sx?: any;
 }
 
-export default function AddItemFAB({ onAdd, autocompleteOptions }: AddItemFABProps) {
+export default function AddItemFAB({ onAdd, autocompleteOptions, sx }: AddItemFABProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -44,7 +45,13 @@ export default function AddItemFAB({ onAdd, autocompleteOptions }: AddItemFABPro
         color="primary" 
         aria-label="add" 
         onClick={handleOpen}
-        sx={{ position: 'fixed', bottom: { xs: 80, sm: 32 }, right: 32, zIndex: 1100 }}
+        sx={{ 
+          position: 'fixed', 
+          bottom: { xs: 80, sm: 32 }, 
+          right: 32, 
+          zIndex: 1100,
+          ...sx 
+        }}
       >
         <AddIcon />
       </Fab>

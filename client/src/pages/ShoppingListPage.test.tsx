@@ -68,4 +68,51 @@ describe('ShoppingListPage', () => {
     // Currently this will FAIL because Side Panel is above Main List in code
     expect(myListIndex).toBeLessThan(cheapestStoreIndex);
   });
+
+  it('verifies the asymmetrical grid layout for desktop', async () => {
+    // Mock matchMedia to return false for (max-width) queries to simulate desktop
+    vi.spyOn(window, 'matchMedia').mockImplementation(query => ({
+      matches: false, // Default to false (not matching max-width mobile query)
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    renderWithContext(<ShoppingListPage />);
+
+    const mainContainer = await screen.findByTestId('shopping-list-container');
+    
+    // MUI sx props might still be tricky, but toHaveStyle is the preferred RTL way
+    expect(mainContainer).toHaveStyle({
+        maxWidth: '1400px'
+    });
+    // Grid columns and gap might not resolve correctly in JSDOM's style engine
+    // but at least we can verify the ones that do.
+  });
+
+  it('verifies side panel cohesion: Side panel cards should be outlined to distinguish from main list', async () => {
+    // Mock needed data to show side panel (Cheapest Store)
+    vi.spyOn(window, 'matchMedia').mockImplementation(query => ({
+        matches: false, // Desktop
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+  
+      renderWithContext(<ShoppingListPage />);
+  
+      // On desktop, there should be only one "Cheapest Store" header in the side panel
+      const cheapestStoreHeader = await screen.findByText(/Cheapest Store/i);
+      const sidePanelCard = cheapestStoreHeader.closest('.MuiPaper-root');
+      
+      expect(sidePanelCard).toHaveClass('MuiPaper-outlined');
+  });
 });
