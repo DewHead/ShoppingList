@@ -35,7 +35,7 @@
 ## Phase 4: Polish & Theme Consistency
 - [x] Task: Animation & Feedback bae0274
     - [x] Add micro-animations for page transitions and button taps.
-- [ ] Task: Dark Mode & RTL Audit
-    - [ ] Verify all new components in Dark Mode and Hebrew RTL.
-    - [ ] Fix any contrast or alignment issues.
+- [x] Task: Dark Mode & RTL Audit 14597cd
+    - [x] Verify all new components in Dark Mode and Hebrew RTL.
+    - [x] Fix any contrast or alignment issues.
 - [ ] Task: Conductor - User Manual Verification 'Phase 4: Polish & Theme Consistency' (Protocol in workflow.md)
