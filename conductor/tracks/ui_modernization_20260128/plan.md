@@ -11,7 +11,7 @@
     - [x] Adjust global container padding for better mobile "breathability".
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Navigation & Layout Foundation' (Protocol in workflow.md)
 
-## Phase 2: Shopping List Page Modernization
+## Phase 2: Shopping List Page Modernization [checkpoint: a7144f0]
 - [x] Task: Floating Action Button (FAB) for adding items cd32bdb
     - [x] Write tests for FAB interaction and Add Item dialog.
     - [x] Implement `AddItemFAB` component.
@@ -22,14 +22,14 @@
     - [x] Implement Swipe-to-Toggle (Mark as Done) functionality.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Shopping List Page Modernization' (Protocol in workflow.md)
 
-## Phase 3: Comparison Page Refactor
-- [ ] Task: Best Price Summary Card
-    - [ ] Write unit tests for "Cheapest Store" calculation logic (ensuring savings are correct).
-    - [ ] Implement `ComparisonSummary` card at the top of the page.
-- [ ] Task: Sticky Headers & Grid Layout
-    - [ ] Write tests for sticky positioning and responsive stacking.
-    - [ ] Implement sticky headers for store names/totals.
-    - [ ] Refactor comparison grid for better desktop/mobile parity.
+## Phase 3: Comparison Page Refactor [checkpoint: 6ba496d]
+- [x] Task: Best Price Summary Card ec05b67
+    - [x] Write unit tests for "Cheapest Store" calculation logic (ensuring savings are correct).
+    - [x] Implement `ComparisonSummary` card at the top of the page.
+- [x] Task: Sticky Headers & Grid Layout ffba383
+    - [x] Write tests for sticky positioning and responsive stacking.
+    - [x] Implement sticky headers for store names/totals.
+    - [x] Refactor comparison grid for better desktop/mobile parity.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Comparison Page Refactor' (Protocol in workflow.md)
 
 ## Phase 4: Polish & Theme Consistency
