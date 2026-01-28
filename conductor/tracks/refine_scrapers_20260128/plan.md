@@ -4,9 +4,9 @@
 - [x] Task: Audit and Refactor existing Shufersal scraper 73fecff
     - [x] Write integration tests for current Shufersal scraper.
     - [x] Refactor scraper logic to modularize item extraction.
-- [ ] Task: Standardize Scraper Interface
-    - [ ] Define a common interface/abstract class for all scrapers.
-    - [ ] Implement standard error handling and retry logic.
+- [x] Task: Standardize Scraper Interface c29abef
+    - [x] Define a common interface/abstract class for all scrapers.
+    - [x] Implement standard error handling and retry logic.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Refactoring' (Protocol in workflow.md)
 
 ## Phase 2: Multi-Retailer Support
