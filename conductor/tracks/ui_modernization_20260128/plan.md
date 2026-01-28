@@ -5,10 +5,10 @@
     - [x] Write Vitest tests for Navigation component (Active states, RTL).
     - [x] Create `BottomNav` component using MUI `BottomNavigation`.
     - [x] Integrate `BottomNav` into `App.tsx` and ensure it only shows on mobile/tablet.
-- [ ] Task: Global Layout Adjustments
-    - [ ] Write CSS tests or visual regression checks for spacing/typography.
-    - [ ] Standardize typography across all pages using MUI Theme.
-    - [ ] Adjust global container padding for better mobile "breathability".
+- [x] Task: Global Layout Adjustments 6908d6d
+    - [x] Write CSS tests or visual regression checks for spacing/typography.
+    - [x] Standardize typography across all pages using MUI Theme.
+    - [x] Adjust global container padding for better mobile "breathability".
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Navigation & Layout Foundation' (Protocol in workflow.md)
 
 ## Phase 2: Shopping List Page Modernization
