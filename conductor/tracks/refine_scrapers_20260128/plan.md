@@ -18,7 +18,7 @@
     - [x] Update populate scripts to handle multiple sources.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Multi-Retailer Support' (Protocol in workflow.md)
 
-## Phase 3: Validation & UI
+## Phase 3: Validation & UI [checkpoint: 7a0f91b]
 - [x] Task: Heuristic Validation 0a77f45
     - [x] Implement outlier detection (Phase 2 core feature).
     - [x] Add tests for price validation logic.
