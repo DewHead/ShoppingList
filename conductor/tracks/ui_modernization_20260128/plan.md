@@ -16,10 +16,10 @@
     - [x] Write tests for FAB interaction and Add Item dialog.
     - [x] Implement `AddItemFAB` component.
     - [x] Create Bottom Sheet / Modal for item input (replacing top search bar).
-- [ ] Task: Interactive List Rows
-    - [ ] Write integration tests for swipe interactions (using `react-swipeable-list` or similar).
-    - [ ] Implement Swipe-to-Delete functionality.
-    - [ ] Implement Swipe-to-Toggle (Mark as Done) functionality.
+- [x] Task: Interactive List Rows 6f337b2
+    - [x] Write integration tests for swipe interactions (using `react-swipeable-list` or similar).
+    - [x] Implement Swipe-to-Delete functionality.
+    - [x] Implement Swipe-to-Toggle (Mark as Done) functionality.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Shopping List Page Modernization' (Protocol in workflow.md)
 
 ## Phase 3: Comparison Page Refactor
