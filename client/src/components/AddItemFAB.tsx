@@ -50,7 +50,7 @@ export default function AddItemFAB({ onAdd, autocompleteOptions }: AddItemFABPro
       </Fab>
 
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
-        <DialogTitle>{t('addItem') || 'Add New Item'}</DialogTitle>
+        <DialogTitle>{t('addItem')}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <Autocomplete
@@ -78,7 +78,7 @@ export default function AddItemFAB({ onAdd, autocompleteOptions }: AddItemFABPro
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleClose}>{t('cancel') || 'Cancel'}</Button>
+          <Button onClick={handleClose}>{t('cancel')}</Button>
           <Button onClick={handleAdd} variant="contained">{t('add')}</Button>
         </DialogActions>
       </Dialog>
