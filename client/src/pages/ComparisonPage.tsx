@@ -214,7 +214,14 @@ const ComparisonPage = () => {
 
       <ComparisonSummary cheapestStore={cheapestStoreData} maxTotal={maxTotal} />
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 3 }}>
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: {
+          xs: '1fr',
+          md: 'repeat(auto-fit, minmax(400px, 1fr))'
+        }, 
+        gap: 3 
+      }}>
         {supermarkets.filter(s => s.is_active).map(s => {
           const results = storeResults[s.id]?.results;
           let filteredResults = results;
@@ -255,13 +262,27 @@ const ComparisonPage = () => {
                         borderRadius: 4, 
                         fontSize: '0.75rem', 
                         fontWeight: 'bold',
-                        boxShadow: 2
+                        boxShadow: 2,
+                        zIndex: 1100 // Ensure it's above the sticky header
                     }}
                 >
-                    {t('bestPrice') || 'Best Price'}
+                    {t('bestPrice')}
                 </Box>
             )}
-            <Box sx={{ mb: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <Box sx={{ 
+              mb: 1.5, 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'baseline',
+              position: 'sticky',
+              top: { xs: 56, sm: 64 }, // AppBar height
+              bgcolor: 'background.paper',
+              pt: 1,
+              pb: 1,
+              zIndex: 10,
+              borderBottom: '1px solid',
+              borderColor: 'divider'
+            }}>
               <ListItemText 
                 primary={
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
