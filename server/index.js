@@ -3,6 +3,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const { initDb } = require('./db');
+const { validateProduct } = require('./utils/validation');
 
 const app = express();
 const server = http.createServer(app);
@@ -138,8 +139,13 @@ async function saveDiscoveryResults(storeId, products, promos) {
 
       const uniqueProducts = new Map();
       for (const item of products) {
-        const key = `${item.remote_id}_${item.branch_info}`;
-        uniqueProducts.set(key, item);
+        const validation = validateProduct(item);
+        if (validation.isValid) {
+          const key = `${item.remote_id}_${item.branch_info}`;
+          uniqueProducts.set(key, item);
+        } else {
+          console.warn(`Skipping invalid product: ${item.remote_name} (ID: ${item.remote_id}). Reason: ${validation.reason}`);
+        }
       }
 
       for (const item of uniqueProducts.values()) {
