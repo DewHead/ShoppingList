@@ -1,6 +1,6 @@
 # Implementation Plan: UI/UX Modernization & Refactor
 
-## Phase 1: Navigation & Layout Foundation
+## Phase 1: Navigation & Layout Foundation [checkpoint: 41a930e]
 - [x] Task: Implement Bottom Navigation Bar 86c3fe5
     - [x] Write Vitest tests for Navigation component (Active states, RTL).
     - [x] Create `BottomNav` component using MUI `BottomNavigation`.
