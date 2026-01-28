@@ -32,7 +32,7 @@
     - [x] Refactor comparison grid for better desktop/mobile parity.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Comparison Page Refactor' (Protocol in workflow.md)
 
-## Phase 4: Polish & Theme Consistency
+## Phase 4: Polish & Theme Consistency [checkpoint: 8eccc81]
 - [x] Task: Animation & Feedback bae0274
     - [x] Add micro-animations for page transitions and button taps.
 - [x] Task: Dark Mode & RTL Audit 14597cd
