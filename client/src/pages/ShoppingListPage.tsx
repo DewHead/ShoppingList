@@ -525,25 +525,26 @@ const ShoppingListPage = () => {
 
   return (
     <Box 
-        dir="rtl"
         sx={hasSidePanel ? { 
             display: 'grid', 
-            gridTemplateColumns: { md: '320px 400px' }, 
-            gap: 12, 
-            justifyContent: 'center', 
-            mx: 'auto' 
+            gridTemplateColumns: { md: '1fr 1fr' }, 
+            gap: 4, 
+            maxWidth: '1200px',
+            mx: 'auto',
+            pb: 10 // Extra padding for FAB
         } : { 
-            maxWidth: '600px', 
-            mx: 'auto' 
+            maxWidth: '800px', 
+            mx: 'auto',
+            pb: 10 // Extra padding for FAB
         }}
     >
-      {/* Side Panel (Now on the right in RTL grid, which visually is the LEFT side) */}
-      <Box dir="ltr" sx={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {/* Side Panel */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {selectedItemIds.length > 0 && (
             <Paper sx={{ p: 0, overflow: 'hidden' }}>
                 <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
                     <Typography variant="h6" sx={{ fontSize: '1.1rem' }}>
-                        {selectedItems.length === 1 ? `${t('matchesFor') || 'Matches for'} "${selectedItems[0].itemName}"` : `${t('matchesFor') || 'Matches for'} ${selectedItems.length} items`}
+                        {selectedItems.length === 1 ? `${t('matchesFor')} "${selectedItems[0].itemName}"` : `${t('matchesFor')} ${selectedItems.length} items`}
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1 }}>
                         <Button size="small" onClick={toggleAllStores} sx={{ minWidth: 'auto', px: 1 }}>{expandedStores.length === Object.keys(groupedMatchesByStore).length ? <ExpandLess /> : <ExpandMore />}</Button>
@@ -626,8 +627,8 @@ const ShoppingListPage = () => {
           )}
       </Box>
 
-      {/* Main List (Now on the left in RTL grid, which visually is the RIGHT side) */}
-      <Box dir="ltr" sx={{ textAlign: 'left' }}>
+      {/* Main List */}
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ mb: 3 }}>
           <Typography variant="h4" sx={{ mb: 1 }}>{t('myList')}</Typography>
           <Typography variant="body1" color="text.secondary">{t('myListDescription')}</Typography>
