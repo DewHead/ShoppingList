@@ -183,6 +183,25 @@ const ComparisonPage = () => {
     store.results?.some((r: any) => r.promo_description?.includes('קופון'))
   );
 
+  // Calculate totals for all stores to find the best one
+  const storeTotals = supermarkets
+    .filter(s => s.is_active)
+    .map(s => {
+      const results = storeResults[s.id]?.results;
+      let filteredResults = results;
+      if (hideCoupons) {
+        filteredResults = filteredResults?.filter((r: any) => !r.promo_description?.includes('קופון'));
+      }
+      if (!showCreditCardPromos) {
+        filteredResults = filteredResults?.filter((r: any) => !r.promo_description?.includes('SBOX'));
+      }
+      const smartData = calculateSmartTotal(filteredResults);
+      return { id: s.id, ...smartData };
+    });
+
+  const validTotals = storeTotals.filter(t => t.isValid).map(t => parseFloat(t.total));
+  const minTotal = validTotals.length > 0 ? Math.min(...validTotals) : null;
+
   return (
     <Box>
       <Box sx={{ mb: 4, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
@@ -235,19 +254,41 @@ const ComparisonPage = () => {
           }
 
           const smartData = calculateSmartTotal(filteredResults);
+          const isCheapest = minTotal !== null && smartData.isValid && parseFloat(smartData.total) === minTotal;
 
           return (
           <Paper 
             key={s.id} 
-            elevation={0} 
+            elevation={isCheapest ? 4 : 0} 
             sx={{ 
                 p: 2, 
                 transition: 'transform 0.2s', 
                 '&:hover': { transform: 'translateY(-2px)' },
                 opacity: smartData.isValid ? 1 : 0.6,
-                border: !smartData.isValid ? '1px dashed rgba(255,0,0,0.3)' : 'none'
+                border: !smartData.isValid ? '1px dashed rgba(255,0,0,0.3)' : (isCheapest ? `2px solid ${theme.palette.success.main}` : 'none'),
+                backgroundColor: isCheapest ? (isDark ? 'rgba(46, 125, 50, 0.1)' : 'rgba(237, 247, 237, 0.5)') : 'background.paper',
+                position: 'relative'
             }}
           >
+            {isCheapest && (
+                <Box 
+                    sx={{ 
+                        position: 'absolute', 
+                        top: -12, 
+                        right: 20, 
+                        bgcolor: 'success.main', 
+                        color: 'white', 
+                        px: 1.5, 
+                        py: 0.5, 
+                        borderRadius: 4, 
+                        fontSize: '0.75rem', 
+                        fontWeight: 'bold',
+                        boxShadow: 2
+                    }}
+                >
+                    {t('bestPrice') || 'Best Price'}
+                </Box>
+            )}
             <Box sx={{ mb: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <ListItemText 
                 primary={

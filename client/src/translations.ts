@@ -74,4 +74,5 @@ export const translations = {
 
   hideCoupons: { en: 'Hide Coupons', he: 'הסתר קופונים' },
   noCouponsTooltip: { en: 'No coupons available for these items', he: 'אין קופונים זמינים עבור פריטים אלה' },
+  bestPrice: { en: 'Best Price', he: 'המחיר הטוב ביותר' },
 };
