@@ -110,7 +110,16 @@ function App() {
             </Toolbar>
           </AppBar>
 
-          <Box component="main" sx={{ flexGrow: 1, px: { xs: 2, sm: 4, md: 6 }, py: { xs: 3, md: 6 }, position: 'relative', zIndex: 1 }}>
+          <Box component="main" sx={{ 
+            flexGrow: 1, 
+            px: { xs: 2, sm: 4, md: 8, lg: 12 }, 
+            py: { xs: 2, md: 4 }, 
+            position: 'relative', 
+            zIndex: 1,
+            maxWidth: '1600px',
+            margin: '0 auto',
+            width: '100%'
+          }}>
             <Routes>
               <Route path="/" element={<ShoppingListPage />} />
               <Route path="/comparison" element={<ComparisonPage />} />
