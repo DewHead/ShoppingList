@@ -1,9 +1,9 @@
 # Implementation Plan: Refine and Robustify Scrapers
 
 ## Phase 1: Foundation & Refactoring
-- [ ] Task: Audit and Refactor existing Shufersal scraper
-    - [ ] Write integration tests for current Shufersal scraper.
-    - [ ] Refactor scraper logic to modularize item extraction.
+- [x] Task: Audit and Refactor existing Shufersal scraper 73fecff
+    - [x] Write integration tests for current Shufersal scraper.
+    - [x] Refactor scraper logic to modularize item extraction.
 - [ ] Task: Standardize Scraper Interface
     - [ ] Define a common interface/abstract class for all scrapers.
     - [ ] Implement standard error handling and retry logic.
