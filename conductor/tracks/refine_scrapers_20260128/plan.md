@@ -22,6 +22,6 @@
 - [x] Task: Heuristic Validation 0a77f45
     - [x] Implement outlier detection (Phase 2 core feature).
     - [x] Add tests for price validation logic.
-- [ ] Task: Comparison UI Update
-    - [ ] Update frontend to display multiple store prices side-by-side.
+- [x] Task: Comparison UI Update b02becd
+    - [x] Update frontend to display multiple store prices side-by-side.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Validation & UI' (Protocol in workflow.md)
