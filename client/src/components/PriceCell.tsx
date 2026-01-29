@@ -11,6 +11,15 @@ interface PriceCellProps {
 const PriceCell: React.FC<PriceCellProps> = ({ priceInfo }) => {
   const theme = useTheme();
   const { t } = useTranslation();
+
+  if (!priceInfo) {
+    return (
+      <Typography variant="body2" color="text.disabled" align="center">
+        ...
+      </Typography>
+    );
+  }
+
   const { price, displayPrice, isCheapest, status, promo, link } = priceInfo;
 
   if (status === 'missing') {

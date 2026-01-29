@@ -78,4 +78,7 @@ export const translations = {
   saveText: { en: 'Save ₪%amount%', he: 'חסכון של ₪%amount%' },
   addItem: { en: 'Add New Item', he: 'הוספת פריט חדש' },
   cancel: { en: 'Cancel', he: 'ביטול' },
+  product: { en: 'Product', he: 'מוצר' },
+  noData: { en: 'No comparison data available.', he: 'אין נתוני השוואה זמינים.' },
+  promo: { en: 'Promo', he: 'מבצע' },
 };
