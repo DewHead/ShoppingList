@@ -199,7 +199,6 @@ const SettingsPage = () => {
                                         onClick={() => handleScrapeStore(s.id)}
                                         color="primary"
                                         disabled={!s.is_active || (!!scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' && !scrapingStates[s.id].startsWith('Error'))}
-                                        size="small"
                                     >
                                         {(!!scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' && !scrapingStates[s.id].startsWith('Error')) ? <CircularProgress size={20} /> : <Play size={20} />}
                                     </IconButton>
@@ -210,10 +209,9 @@ const SettingsPage = () => {
                                 <IconButton
                                     onClick={() => navigate(`/scraped-data/${s.id}`)}
                                     color="primary"
-                                    size="small"
                                     sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(103, 58, 183, 0.1)' : 'rgba(103, 58, 183, 0.05)' }}
                                 >
-                                    <ListAltIcon fontSize="small" />
+                                    <ListAltIcon />
                                 </IconButton>
                             </Tooltip>
 
@@ -221,7 +219,6 @@ const SettingsPage = () => {
                                 checked={s.is_active === 1}
                                 onChange={(e) => handleUpdate(s.id, 'is_active', e.target.checked ? 1 : 0)}
                                 color="primary"
-                                size="small"
                             />
                         </Box>
                     </ListItem>
@@ -257,8 +254,7 @@ const SettingsPage = () => {
                             </Box>
                             <Select
                                 value={language}
-                                size="small"
-                                onChange={(e) => toggleLanguage(e.target.value)}
+                                onChange={(e) => toggleLanguage(e.target.value as string)}
                                 sx={{ minWidth: '120px' }}
                             >
                                 <MenuItem value="he">עברית</MenuItem>
@@ -266,58 +262,58 @@ const SettingsPage = () => {
                             </Select>
                         </Box>
                     </Box>
-                                </SettingsCard>
-                
-                                <SettingsCard title={language === 'he' ? 'חזותי' : 'Appearance'} icon={<ImageIcon size={20} />}>
-                                    <Box>
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                            {language === 'he' ? 'בחר את הרקע המועדף עליך' : 'Choose your favorite background'}
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: { xs: 'center', sm: 'flex-start' } }}>
-                                            {backgroundOptions.map((option) => (
-                                                <Box
-                                                    key={option.name}
-                                                    onClick={() => setBackground(option.name)}
-                                                    sx={{
-                                                        cursor: 'pointer',
-                                                        borderRadius: 2,
-                                                        border: '3px solid',
-                                                        borderColor: background === option.name ? 'primary.main' : 'transparent',
-                                                        overflow: 'hidden',
-                                                        width: { xs: 'calc(50% - 8px)', sm: 150 },
-                                                        height: 100,
-                                                        position: 'relative',
-                                                        '&:hover': {
-                                                            borderColor: 'primary.light',
-                                                        },
-                                                    }}
-                                                >
-                                                    <img src={option.thumbnail} alt={option.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    <Typography
-                                                        variant="caption"
-                                                        sx={{
-                                                            position: 'absolute',
-                                                            bottom: 0,
-                                                            left: 0,
-                                                            right: 0,
-                                                            bgcolor: 'rgba(0,0,0,0.6)',
-                                                            color: 'white',
-                                                            textAlign: 'center',
-                                                            p: 0.5,
-                                                        }}
-                                                    >
-                                                        {t(option.name)}
-                                                    </Typography>
-                                                </Box>
-                                            ))}
-                                        </Box>
-                                    </Box>
-                                </SettingsCard>
-                            </Box>
-                          )}
+                </SettingsCard>
+
+                <SettingsCard title={language === 'he' ? 'חזותי' : 'Appearance'} icon={<ImageIcon size={20} />}>
+                    <Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            {language === 'he' ? 'בחר את הרקע המועדף עליך' : 'Choose your favorite background'}
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: { xs: 'center', sm: 'flex-start' } }}>
+                            {backgroundOptions.map((option) => (
+                                <Box
+                                    key={option.name}
+                                    onClick={() => setBackground(option.name)}
+                                    sx={{
+                                        cursor: 'pointer',
+                                        borderRadius: 2,
+                                        border: '3px solid',
+                                        borderColor: background === option.name ? 'primary.main' : 'transparent',
+                                        overflow: 'hidden',
+                                        width: { xs: 'calc(50% - 8px)', sm: 150 },
+                                        height: 100,
+                                        position: 'relative',
+                                        '&:hover': {
+                                            borderColor: 'primary.light',
+                                        },
+                                    }}
+                                >
+                                    <img src={option.thumbnail} alt={option.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            position: 'absolute',
+                                            bottom: 0,
+                                            left: 0,
+                                            right: 0,
+                                            bgcolor: 'rgba(0,0,0,0.6)',
+                                            color: 'white',
+                                            textAlign: 'center',
+                                            p: 0.5,
+                                        }}
+                                    >
+                                        {t(option.name)}
+                                    </Typography>
+                                </Box>
+                            ))}
                         </Box>
-                      </Box>
                     </Box>
-                  );
-                };
+                </SettingsCard>
+            </Box>
+          )}
+        </Box>
+      </Box>
+    </Box>
+  );
+};
 export default SettingsPage;
