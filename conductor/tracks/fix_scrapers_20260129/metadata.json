@@ -1,0 +1,8 @@
+{
+  "track_id": "fix_scrapers_20260129",
+  "type": "bug",
+  "status": "new",
+  "created_at": "2026-01-29T14:00:00Z",
+  "updated_at": "2026-01-29T14:00:00Z",
+  "description": "all of the configured scrapers besides rami levi are broken. they used to all work perfectly. no scrapers for קשת טעמים and טאיו were created so those can be ignored. we need to fix the scrapers."
+}

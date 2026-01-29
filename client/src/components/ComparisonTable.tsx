@@ -41,10 +41,17 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
   };
 
   return (
-    <TableContainer component={Paper} sx={{ maxHeight: '70vh', overflow: 'auto' }}>
+    <TableContainer 
+      component={Paper} 
+      sx={{ 
+        maxHeight: '70vh', 
+        overflow: 'auto',
+        bgcolor: 'background.paper'
+      }}
+    >
       <Table stickyHeader aria-label="comparison table">
         <TableHead>
-          <TableRow>
+          <TableRow sx={{ backgroundColor: 'background.paper' }}>
             <TableCell 
               sx={{ 
                 fontWeight: 'bold', 
@@ -67,7 +74,11 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
               <TableCell 
                 key={store.id} 
                 align="center"
-                sx={{ fontWeight: 'bold', minWidth: 120 }}
+                sx={{ 
+                  fontWeight: 'bold', 
+                  minWidth: 120,
+                  backgroundColor: 'background.paper'
+                }}
               >
                 <TableSortLabel
                   active={sortConfig.key === store.id}

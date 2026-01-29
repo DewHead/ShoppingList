@@ -113,7 +113,7 @@ export default function ShoppingListSidePanel({
                      String(currentBestMatchForStore.remote_id) === String(match.remote_id);
     
     return (
-        <ListItem key={`${match.supermarket_id}-${match.remote_id}-${item.id}`} disableGutters sx={{ py: 0.5 }}>
+        <ListItem key={`${match.supermarket_id}-${match.remote_id}-${item.id}`} disableGutters sx={{ py: 0.5, px: 2 }}>
             <ListItemText 
                 primary={
                     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -195,7 +195,7 @@ export default function ShoppingListSidePanel({
                                         <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>{storeName}</Typography>
                                     </Box>
                                     {!isExpanded && (
-                                        <Box sx={{ pl: 1, pb: 1 }}>
+                                        <Box sx={{ pl: 1, pr: 1, pb: 1 }}>
                                             <List dense disablePadding>
                                                 {itemsWithMatches.map(({ item, matches }) => {
                                                     const bestMatch = matches[0];

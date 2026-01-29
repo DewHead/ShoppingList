@@ -25,4 +25,15 @@ This file tracks all major tracks for the project. Each track has its own detail
 ---
 
 - [x] **Track: refactor comparison page to show all stores and prices in a table and mark the cheapest store. the table should be easily understandabl and modern in style. the table will update will show the stores that are active in the setting page**
+
 *Link: [./tracks/comparison_page_refactor_20260129/](./tracks/comparison_page_refactor_20260129/)*
+
+
+
+---
+
+
+
+- [~] **Track: Fix and Separate Scrapers**
+
+*Link: [./tracks/fix_scrapers_20260129/](./tracks/fix_scrapers_20260129/)*
