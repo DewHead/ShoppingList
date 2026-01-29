@@ -30,7 +30,7 @@
 - [x] Task: Final styling polish to ensure "modern" look (padding, typography, colors).
 - [x] Task: Conductor - User Manual Verification 'Mobile & Polish' (Protocol in workflow.md)
 
-## Phase 5: Verification & Cleanup
-- [ ] Task: Run full suite of unit and integration tests.
-- [ ] Task: Verify responsive behavior on simulated mobile devices.
-- [ ] Task: Conductor - User Manual Verification 'Final Verification' (Protocol in workflow.md)
+## Phase 5: Verification & Cleanup [checkpoint: e995001]
+- [x] Task: Run full suite of unit and integration tests.
+- [x] Task: Verify responsive behavior on simulated mobile devices.
+- [x] Task: Conductor - User Manual Verification 'Final Verification' (Protocol in workflow.md)
