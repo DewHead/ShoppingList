@@ -118,3 +118,108 @@ export const calculateBestPrice = (match: any, quantity: number) => {
   return bestResult;
 };
 
+export const transformToMatrix = (
+  shoppingList: any[],
+  storeResults: Record<number, any>
+): ComparisonMatrixRow[] => {
+  return shoppingList.map((listItem) => {
+    const prices: Record<number, PriceInfo> = {};
+    const validPrices: number[] = [];
+
+    // First pass: Collect all prices for this item to find the minimum
+    Object.entries(storeResults).forEach(([storeId, data]) => {
+      const results = data.results || [];
+      const match = results.find((r: any) => r.item.itemName === listItem.itemName);
+      
+      if (match) {
+        let priceVal = 0;
+        const priceStr = String(match.price);
+        
+        if (priceStr !== 'N/A' && priceStr !== 'NA' && match.rawPrice !== 0) {
+           priceVal = parseFloat(priceStr.replace(/[^\d.]/g, ''));
+           if (!isNaN(priceVal) && priceVal > 0) {
+             validPrices.push(priceVal);
+           }
+        }
+      }
+    });
+
+    const minPrice = validPrices.length > 0 ? Math.min(...validPrices) : null;
+
+    // Second pass: Build the PriceInfo objects
+    Object.entries(storeResults).forEach(([storeId, data]) => {
+      const results = data.results || [];
+      const match = results.find((r: any) => r.item.itemName === listItem.itemName);
+      const id = parseInt(storeId);
+
+      if (!match) {
+        prices[id] = {
+          price: 0,
+          displayPrice: '-',
+          isCheapest: false,
+          status: 'missing'
+        };
+        return;
+      }
+
+      let priceVal = 0;
+      let displayPrice = match.price;
+      let status: PriceInfo['status'] = 'available';
+      const priceStr = String(match.price);
+
+      if (priceStr === 'N/A' || priceStr === 'NA' || match.rawPrice === 0) {
+        status = 'missing';
+        displayPrice = 'N/A';
+      } else {
+        priceVal = parseFloat(priceStr.replace(/[^\d.]/g, ''));
+        if (isNaN(priceVal) || priceVal === 0) {
+          status = 'missing';
+        }
+      }
+
+      prices[id] = {
+        price: priceVal,
+        displayPrice: displayPrice,
+        isCheapest: minPrice !== null && priceVal === minPrice,
+        status,
+        promo: match.promo_description,
+        link: match.link
+      };
+    });
+
+    return {
+      productName: listItem.itemName,
+      prices
+    };
+  });
+};
+
+export const sortComparisonMatrix = (
+  matrix: ComparisonMatrixRow[],
+  columnId: 'product' | number,
+  direction: 'asc' | 'desc'
+): ComparisonMatrixRow[] => {
+  return [...matrix].sort((a, b) => {
+    if (columnId === 'product') {
+      return direction === 'asc' 
+        ? a.productName.localeCompare(b.productName)
+        : b.productName.localeCompare(a.productName);
+    }
+
+    const priceA = a.prices[columnId];
+    const priceB = b.prices[columnId];
+
+    const isAMissing = !priceA || priceA.status !== 'available';
+    const isBMissing = !priceB || priceB.status !== 'available';
+
+    if (isAMissing && isBMissing) return 0;
+    if (isAMissing) return 1; // Always put missing at the bottom
+    if (isBMissing) return -1;
+
+    const valA = priceA.price;
+    const valB = priceB.price;
+
+    return direction === 'asc' ? valA - valB : valB - valA;
+  });
+};
+
