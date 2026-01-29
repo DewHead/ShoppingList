@@ -23,9 +23,9 @@
 - [x] Task: Create `MarketBaseScraper` (or equivalent) extracting common filtering/API logic from `mahsaneyHashuk.js`. 3048c21
     - [x] Create `tests/market_base.test.js`.
     - [x] Implement `MarketBaseScraper.js`.
-- [ ] Task: Refactor `mahsaneyHashuk.js` to use the new shared base.
-    - [ ] Ensure existing tests pass.
-    - [ ] Implement refactor.
+- [x] Task: Refactor `mahsaneyHashuk.js` to use the new shared base. a58fec0
+    - [x] Ensure existing tests pass.
+    - [x] Implement refactor.
 - [ ] Task: Implement `victory.js` using the shared base.
     - [ ] Create `tests/victory.test.js`.
     - [ ] Implement `victory.js`.
