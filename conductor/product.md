@@ -18,6 +18,7 @@ The user wants to build a Shopping List application with integrated price scrapi
 
 ## User Experience (UX)
 - **Modern Navigation:** A persistent bottom navigation bar for quick access to core features on mobile.
+- **Responsive Configuration:** A card-based settings interface optimized for mobile ergonomics, providing clear grouping of scraper and application preferences.
 - **Contextual Optimization:** A sticky bottom summary bar on mobile that opens a detailed optimization drawer, and a sticky asymmetrical side panel on desktop.
 - **Interactive List:** Mobile-first interactions including swipe-to-delete and swipe-to-toggle for efficient list management.
 - **Data Visualization:** Summary cards and color-coded highlighting to provide immediate insights into price comparisons.
