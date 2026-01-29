@@ -125,7 +125,7 @@ const SettingsPage = () => {
             value={activeTab}
             onChange={(_, newValue) => setActiveTab(newValue)}
             sx={{
-                borderRight: 1,
+                borderInlineEnd: 1,
                 borderColor: 'divider',
                 '& .MuiTab-root': {
                     alignItems: 'flex-start',

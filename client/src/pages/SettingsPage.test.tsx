@@ -4,6 +4,7 @@ import SettingsPage from './SettingsPage';
 import { AppContext } from '../AppContext';
 import { BrowserRouter } from 'react-router-dom';
 import axios from 'axios';
+import * as useTranslationModule from '../useTranslation';
 
 // Mock dependencies
 vi.mock('axios');
@@ -16,21 +17,38 @@ vi.mock('socket.io-client', () => ({
   }),
 }));
 
+const translations: Record<string, Record<string, string>> = {
+    en: {
+        'settings': 'Settings',
+        'settingsDescription': 'Manage your preferences',
+        'Store settings': 'Store settings',
+        'Visual': 'Visual'
+    },
+    he: {
+        'settings': 'הגדרות',
+        'settingsDescription': 'נהל את ההעדפות שלך',
+        'Store settings': 'הגדרות חנות',
+        'Visual': 'חזותי'
+    }
+};
+
 vi.mock('../useTranslation', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-    language: 'en',
-  }),
+  useTranslation: vi.fn(),
 }));
 
 const mockSupermarkets = [
   { id: 1, name: 'Super Store', is_active: 1, last_scrape_time: null, url: 'http://example.com' }
 ];
 
-const renderWithContext = (component: React.ReactNode) => {
+const renderWithContext = (component: React.ReactNode, language: 'en' | 'he' = 'en') => {
+  vi.mocked(useTranslationModule.useTranslation).mockReturnValue({
+    t: (key: string) => translations[language][key] || key,
+    language,
+  } as any);
+
   return render(
     <AppContext.Provider value={{ 
-      language: 'en', 
+      language, 
       toggleLanguage: vi.fn(), 
       theme: 'light', 
       toggleColorMode: vi.fn(), 
@@ -80,21 +98,23 @@ describe('SettingsPage', () => {
   it('verifies touch targets for interactive elements are rendered', async () => {
     const { getByText, findByText } = renderWithContext(<SettingsPage />);
     
-    // Check Store Settings tab (default) - find the store name first to ensure data is loaded
     await findByText('Super Store');
     
-    // Find switches using role "switch" as seen in debug output
     const storeSwitches = screen.getAllByRole('switch', { hidden: true });
     expect(storeSwitches.length).toBeGreaterThan(0);
 
-    // Switch to Visual tab
     const visualTab = getByText('Visual');
     await act(async () => {
       fireEvent.click(visualTab);
     });
 
-    // Check Visual tab switches
     const visualSwitches = await screen.findAllByRole('switch', { hidden: true });
     expect(visualSwitches.length).toBeGreaterThan(0);
+  });
+
+  it('renders Hebrew text when language is set to he', async () => {
+    const { getAllByText } = renderWithContext(<SettingsPage />, 'he');
+    const elements = getAllByText('הגדרות חנות');
+    expect(elements.length).toBeGreaterThan(0);
   });
 });
