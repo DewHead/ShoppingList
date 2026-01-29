@@ -11,7 +11,7 @@ The goal is to transition from sequential store scraping to concurrent execution
     - Replace the sequential `for...of` loop with `Promise.all` (or `Promise.allSettled` to handle partial failures) to trigger `scrapeStore` for all active supermarkets simultaneously.
 - [x] Task: Ensure `scrapeStore` in `server/scraper.js` is safe for parallel execution.
     - Verify that Puppeteer/Playwright instances are properly isolated and do not share global state that could cause race conditions.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Backend Parallelization' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Backend Parallelization' (Protocol in workflow.md) [checkpoint: 1b1ebe1]
 
 ## Phase 2: Frontend Granular Feedback
 The goal is to update the UI to handle and display multiple stores refreshing at once.
