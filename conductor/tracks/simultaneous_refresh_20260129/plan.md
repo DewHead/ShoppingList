@@ -32,4 +32,4 @@ The goal is to update the UI to handle and display multiple stores refreshing at
     - Confirm that multiple store columns update independently and in parallel.
 - [x] Task: Performance and Resource Audit.
     - Observe system resource usage (RAM/CPU) while all scrapers run in parallel and ensure stability.
-- [x] Task: Conductor - User Manual Verification 'Phase 3: Verification & Polish' (Protocol in workflow.md) [checkpoint: 94d5061]
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Verification & Polish' (Protocol in workflow.md) [checkpoint: 0e180a4]

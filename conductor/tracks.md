@@ -40,5 +40,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: Simultaneous Store Refresh**
+- [x] **Track: Simultaneous Store Refresh**
 *Link: [./tracks/simultaneous_refresh_20260129/](./tracks/simultaneous_refresh_20260129/)*
