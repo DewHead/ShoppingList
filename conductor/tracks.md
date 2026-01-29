@@ -42,3 +42,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Simultaneous Store Refresh**
 *Link: [./tracks/simultaneous_refresh_20260129/](./tracks/simultaneous_refresh_20260129/)*
+
+---
+
+- [x] **Track: create scraper for keshet teamim. same flow as rami levi and yohananof but with different username. the username is Keshet. no password needed.**
+*Link: [./tracks/keshet_teamim_scraper_20250514/](./tracks/keshet_teamim_scraper_20250514/)*
