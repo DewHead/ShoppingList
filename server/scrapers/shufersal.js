@@ -18,9 +18,9 @@ class ShufersalScraper extends BaseScraper {
     try {
       await page.goto(transparencyWebsiteUrl, { waitUntil: 'networkidle', timeout: 60000 });
 
-      this.emitStatus(`Filtering for all branches...`);
-      
-      await page.selectOption('#ddlStore', '0'); // "All" branches
+      // Target Store: 413
+      this.emitStatus(`Filtering for store 413...`);
+      await page.selectOption('#ddlStore', '413'); 
       await randomDelay(3000, 5000); 
 
       await page.selectOption('#ddlCategory', '0'); // "All" categories
@@ -61,7 +61,7 @@ class ShufersalScraper extends BaseScraper {
 
       const filesToProcess = [latestPriceFull, latestPromoFull].filter(f => f);
 
-      this.log(`Found ${filesToProcess.length} target files for all branches`);
+      this.log(`Found ${filesToProcess.length} target files for store 413`);
       
       for (const fileLink of filesToProcess) {
         this.emitStatus(`Downloading ${fileLink.type} for ${fileLink.branchName}`);
@@ -72,9 +72,9 @@ class ShufersalScraper extends BaseScraper {
 
           const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
           const result = await parser.parseStringPromise(xml);
+          const root = result.root || result.Root;
           
           if (fileLink.type === 'PRICE_FULL') {
-              const root = result.root || result.Root;
               const products = root && root.Items ? root.Items.Item : []; 
               const productArray = Array.isArray(products) ? products : [products].filter(p => p);
 
@@ -93,9 +93,8 @@ class ShufersalScraper extends BaseScraper {
                   last_updated: new Date().toISOString(),
                 });
               }
-              this.emitStatus(`Processed ${productArray.length} items for ${fileLink.branchName}`);
+              this.emitStatus(`Processed ${productArray.length} items`);
           } else if (fileLink.type === 'PROMO_FULL') {
-              const root = result.root || result.Root;
               const promos = root && root.Promotions ? root.Promotions.Promotion : [];
               const promoArray = Array.isArray(promos) ? promos : [promos].filter(p => p);
 
@@ -131,14 +130,14 @@ class ShufersalScraper extends BaseScraper {
                       }
                   } catch (e) {}
               }
-              this.emitStatus(`Processed ${promoArray.length} promos for ${fileLink.branchName}`);
+              this.emitStatus(`Processed ${promoArray.length} promos`);
           }
         } catch (fileError) {
           this.error(`Error processing file ${fileLink.url}:`, fileError.message);
         }
       }
 
-      this.log(`Final Tally: ${allDiscoveredProducts.length} products, ${allDiscoveredPromos.length} unique items in promos.`);
+      this.log(`Final Tally for Shufersal: ${allDiscoveredProducts.length} products, ${allDiscoveredPromos.length} unique items in promos.`);
 
       if (allDiscoveredProducts.length === 0 && allDiscoveredPromos.length === 0) {
           throw new Error('Scrape failed: No products or promos found. See server logs.');
