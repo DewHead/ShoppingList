@@ -2,12 +2,16 @@
 
 ## Rami Levy -> Yohananof (The "Levy" Family)
 **Source File:** `server/scrapers/ramiLevy.js`
+**Base URL:** `https://url.publishedprices.co.il/login`
 
 ### Shared Logic (to extract to `LevyBaseScraper`):
 1.  **Authentication:**
-    -   Puppeteer/Playwright navigation.
-    -   Login flow: Username input, specific login button, waiting for redirect.
-    -   Cookie extraction (critical for downloading files).
+    -   Puppeteer/Playwright navigation to the shared login URL.
+    -   Login flow: 
+        -   Username input: "RamiLevi" for Rami Levy, "yohananof" for Yohananof.
+        -   Password: None (leave blank).
+        -   Specific login button (`button#login-button`), waiting for redirect.
+    -   Cookie extraction (critical for downloading files via `axios`).
 2.  **File Discovery:**
     -   Scanning `<a>` tags for `.gz` files.
     -   Filtering logic (PriceFull, PromoFull).
@@ -22,16 +26,16 @@
     -   Mapping XML `Promotion` fields to DB schema.
 
 ### Differences (Configuration):
--   **Base URL:** Distinct for each retailer.
--   **Credentials:** Username (Rami Levy uses "RamiLevi", Yohananof will likely use "Yohananof" or similar).
--   **Store Prioritization:** Rami Levy targets store '001'. Yohananof might need a different default or handle generic lists.
+-   **Credentials:** Username ("RamiLevi" vs "yohananof").
+-   **Store Prioritization:** Rami Levy targets store '001'. Yohananof default TBD (likely '001' or generic).
 
 ## Mahsaney Hashuk -> Victory (The "Market" Family)
 **Source File:** `server/scrapers/mahsaneyHashuk.js`
+**Base URL:** `https://laibcatalog.co.il/`
 
 ### Shared Logic (to extract to `MarketBaseScraper`):
 1.  **Navigation & Filtering:**
-    -   Platform: `laibcatalog.co.il` (likely shared by Victory).
+    -   Platform: `laibcatalog.co.il`.
     -   Logic: Select Chain -> SubChain -> Branch -> FileType -> Search.
     -   Generic `selectAndLog` helper is reusable.
 2.  **File Discovery:**
@@ -40,27 +44,27 @@
 3.  **File Processing:**
     -   `axios` download with cookies.
     -   `zlib` gunzip (no tarball).
-    -   XML Parsing (`xml2js`) with flexible root detection (`Root`, `Prices`, `Promos`).
-    -   Item normalization (handling `Item` vs `Product`).
+    -   XML Parsing (`xml2js`) with flexible root detection.
 
 ### Differences:
 -   **Dropdown Values:** Chain names ('מחסני השוק' vs 'ויקטורי').
--   **Branch Selection:** Need to identify a valid branch for Victory.
+-   **Branch Selection:** Victory Branch '68'.
 
 ## Shufersal
 **Source File:** `server/scrapers/shufersal.js`
+**URL:** `https://prices.shufersal.co.il/`
 
-### Audit:
--   **URL:** `https://prices.shufersal.co.il/`
--   **Current Logic:** Select 'All' stores (val '0') -> Select 'All' categories (val '0') -> Scrape `table.webgrid`.
--   **Potential Failures:**
-    -   Selectors (`#ddlStore`, `#ddlCategory`, `table.webgrid`) changed.
-    -   Anti-bot / WAF.
-    -   "All" option removed, requiring specific branch selection.
-    -   Site redesign (SPA/React).
+### Plan:
+-   **Store Selection:** Target Store '413'.
+-   **Categories:** Focus on `PriceFull` and `PromoFull`.
+-   **Audit:** Need to ensure selectors for `#ddlStore` and `#ddlCategory` work correctly with specific IDs.
 
 ## Carrefour
-**Source:** None found in history.
-**Strategy:** Implement from scratch.
--   **Platform Check:** Likely Yeinot Bitan platform or similar.
--   **Approach:** Start by inspecting the target site (manual or via generic scraper) to determine if it fits "Levy" or "Market" pattern, or is unique.
+**Base URL:** `https://prices.carrefour.co.il/`
+**Credentials:** None.
+**Store:** '5304'.
+**Categories:** `PriceFull`, `PromoFull`.
+
+### Strategy:
+-   Analyze `https://prices.carrefour.co.il/`. It likely uses the "Levy" pattern (PublishedPrices) or "Shufersal" pattern. 
+-   Restoration/New Implementation based on the platform signature.
