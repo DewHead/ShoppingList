@@ -15,7 +15,8 @@ import {
   Tab,
   Divider,
   MenuItem,
-  Select
+  Select,
+  useMediaQuery
 } from '@mui/material';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import { Play, Store, Moon, Languages, Image as ImageIcon } from 'lucide-react';
@@ -109,6 +110,7 @@ const SettingsPage = () => {
     }
   };
 
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isDark = theme.palette.mode === 'dark';
 
   return (
@@ -121,18 +123,21 @@ const SettingsPage = () => {
       <Box className="settings-layout">
         <Box className="settings-sidebar">
           <Tabs
-            orientation="vertical"
+            orientation={isMobile ? "horizontal" : "vertical"}
+            variant={isMobile ? "fullWidth" : "standard"}
             value={activeTab}
             onChange={(_, newValue) => setActiveTab(newValue)}
             sx={{
-                borderInlineEnd: 1,
+                borderInlineEnd: isMobile ? 0 : 1,
+                borderBottom: isMobile ? 1 : 0,
                 borderColor: 'divider',
+                mb: isMobile ? 2 : 0,
                 '& .MuiTab-root': {
-                    alignItems: 'flex-start',
-                    textAlign: 'left',
+                    alignItems: isMobile ? 'center' : 'flex-start',
+                    textAlign: isMobile ? 'center' : 'left',
                     minHeight: '48px',
                     borderRadius: 1,
-                    mb: 1,
+                    mb: isMobile ? 0 : 1,
                     px: 2,
                     fontSize: '1rem',
                     fontWeight: 600,
