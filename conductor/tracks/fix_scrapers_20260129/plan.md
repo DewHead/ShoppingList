@@ -38,9 +38,9 @@
 - [x] Task: Conductor - User Manual Verification 'Fixing Shufersal' (Protocol in workflow.md) [checkpoint: 473576e]
 
 ## Phase 5: Carrefour Implementation
-- [ ] Task: Implement `carrefour.js` (Restoration or New Implementation).
-    - [ ] Create `tests/carrefour.test.js`.
-    - [ ] Implement `carrefour.js` (using retrieved code or fresh logic).
+- [x] Task: Implement `carrefour.js` (Restoration or New Implementation). 3a260bc
+    - [x] Create `tests/carrefour.test.js`.
+    - [x] Implement `carrefour.js` (using retrieved code or fresh logic).
 - [ ] Task: Conductor - User Manual Verification 'Carrefour Implementation' (Protocol in workflow.md)
 
 ## Phase 6: Integration & Final Polish
