@@ -1,6 +1,6 @@
 import React from 'react';
 import { Typography, Box, Tooltip, Chip, useTheme } from '@mui/material';
-import { PriceInfo } from '../utils/comparisonUtils';
+import type { PriceInfo } from '../utils/comparisonUtils';
 import StarIcon from '@mui/icons-material/Star';
 import { useTranslation } from '../useTranslation';
 

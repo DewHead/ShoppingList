@@ -11,7 +11,7 @@ import {
   Box,
   Typography
 } from '@mui/material';
-import { ComparisonMatrixRow } from '../utils/comparisonUtils';
+import type { ComparisonMatrixRow } from '../utils/comparisonUtils';
 import PriceCell from './PriceCell';
 import { useTranslation } from '../useTranslation';
 

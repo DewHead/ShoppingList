@@ -21,7 +21,7 @@ import { API_BASE_URL } from '../config';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { AppContext } from '../AppContext';
-import { calculateSmartTotal, transformToMatrix, sortComparisonMatrix, ComparisonMatrixRow } from '../utils/comparisonUtils';
+import { calculateSmartTotal, transformToMatrix, sortComparisonMatrix, type ComparisonMatrixRow } from '../utils/comparisonUtils';
 import ComparisonSummary from '../components/ComparisonSummary';
 import ComparisonTable from '../components/ComparisonTable';
 import './ComparisonPage.css';
