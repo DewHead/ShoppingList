@@ -1,0 +1,47 @@
+:root {
+  --settings-gap: 16px;
+  --settings-sidebar-width: 240px;
+}
+
+.settings-page-container {
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 16px; /* Add some padding for mobile */
+}
+
+/* Header section */
+.settings-header {
+  margin-bottom: 32px;
+}
+
+/* Main Layout */
+.settings-layout {
+  display: flex;
+  flex-direction: column; /* Mobile first: Stack vertically */
+  gap: var(--settings-gap);
+  min-height: 400px;
+}
+
+/* Sidebar (Tabs) */
+.settings-sidebar {
+  width: 100%; /* Mobile: Full width */
+  flex-shrink: 0;
+}
+
+/* Content Area */
+.settings-content {
+  flex-grow: 1;
+}
+
+/* Desktop Styles */
+@media (min-width: 768px) {
+  .settings-layout {
+    flex-direction: row; /* Desktop: Row */
+    gap: 32px;
+  }
+
+  .settings-sidebar {
+    width: var(--settings-sidebar-width);
+  }
+}

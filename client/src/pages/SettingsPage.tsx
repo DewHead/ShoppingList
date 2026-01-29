@@ -26,6 +26,7 @@ import { io } from 'socket.io-client';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { AppContext } from '../AppContext';
+import './SettingsPage.css';
 
 const socket = io(API_BASE_URL);
 
@@ -110,14 +111,14 @@ const SettingsPage = () => {
   const isDark = theme.palette.mode === 'dark';
 
   return (
-    <Box sx={{ maxWidth: '1000px', mx: 'auto' }}>
-      <Box sx={{ mb: 4 }}>
+    <Box className="settings-page-container">
+      <Box className="settings-header">
         <Typography variant="h4" sx={{ mb: 1, fontWeight: 700 }}>{t('settings')}</Typography>
         <Typography variant="body1" color="text.secondary">{t('settingsDescription')}</Typography>
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 4, minHeight: '400px' }}>
-        <Box sx={{ width: '240px', flexShrink: 0 }}>
+      <Box className="settings-layout">
+        <Box className="settings-sidebar">
           <Tabs
             orientation="vertical"
             value={activeTab}
@@ -145,7 +146,7 @@ const SettingsPage = () => {
           </Tabs>
         </Box>
 
-        <Box sx={{ flexGrow: 1 }}>
+        <Box className="settings-content">
           {activeTab === 0 && (
             <Paper elevation={0} sx={{ borderRadius: 3, overflow: 'hidden' }}>
                 <List sx={{ p: 0 }}>
