@@ -3,6 +3,9 @@ const stealth = require('puppeteer-extra-plugin-stealth')();
 const ShufersalScraper = require('./scrapers/shufersal');
 const RamiLevyScraper = require('./scrapers/ramiLevy');
 const MahsaneyHashukScraper = require('./scrapers/mahsaneyHashuk');
+const YohananofScraper = require('./scrapers/yohananof');
+const VictoryScraper = require('./scrapers/victory');
+const CarrefourScraper = require('./scrapers/carrefour');
 
 chromium.use(stealth);
 
@@ -18,12 +21,21 @@ async function scrapeStore(supermarket, items, io, onResults) {
     io.emit('storeStatus', { storeId: supermarket.id, status: 'Starting scrape...' });
     
     let scraper;
-    if (supermarket.url.includes('shufersal')) {
+    const name = supermarket.name.toLowerCase();
+    const url = supermarket.url.toLowerCase();
+
+    if (url.includes('shufersal')) {
       scraper = new ShufersalScraper(supermarket, io);
-    } else if (supermarket.url.includes('publishedprices.co.il') || supermarket.name.includes('רמי לוי')) {
+    } else if (name.includes('יוחננוף')) {
+      scraper = new YohananofScraper(supermarket, io);
+    } else if (url.includes('publishedprices.co.il') || name.includes('רמי לוי')) {
       scraper = new RamiLevyScraper(supermarket, io);
-    } else if (supermarket.url.includes('mahsaneyshak')) {
+    } else if (name.includes('ויקטורי')) {
+      scraper = new VictoryScraper(supermarket, io);
+    } else if (url.includes('mahsaneyshak') || name.includes('מחסני השוק')) {
       scraper = new MahsaneyHashukScraper(supermarket, io);
+    } else if (url.includes('carrefour')) {
+      scraper = new CarrefourScraper(supermarket, io);
     }
 
     if (scraper) {

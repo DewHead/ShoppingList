@@ -71,7 +71,7 @@ describe('Scraper Integration Tests', () => {
         expect(mockPage.goto).toHaveBeenCalledWith(expect.stringContaining('prices.shufersal.co.il'), expect.any(Object));
         
         // Verify we tried to select options
-        expect(mockPage.selectOption).toHaveBeenCalledWith('#ddlStore', '0');
+        expect(mockPage.selectOption).toHaveBeenCalledWith('#ddlStore', '413');
         expect(mockPage.selectOption).toHaveBeenCalledWith('#ddlCategory', '0');
 
         // Verify results callback was called
