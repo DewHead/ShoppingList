@@ -11,6 +11,7 @@
 - **Runtime:** Node.js
 - **Framework:** Express 5.2.1
 - **Database:** SQLite 5.1.1 (via sqlite3)
+- **Concurrency Control:** Concurrency-limited worker pool for parallel tasks; Promise-based queue for sequential database writes.
 - **Real-time:** Socket.io for bidirectional communication.
 
 ## Scraping & AI
