@@ -20,9 +20,9 @@
 - [x] Task: Conductor - User Manual Verification 'The "Levy" Family' (Protocol in workflow.md) [checkpoint: 2de2341]
 
 ## Phase 3: The "Market" Family (Mahsaney Hashuk & Victory)
-- [ ] Task: Create `MarketBaseScraper` (or equivalent) extracting common filtering/API logic from `mahsaneyHashuk.js`.
-    - [ ] Create `tests/market_base.test.js`.
-    - [ ] Implement `MarketBaseScraper.js`.
+- [x] Task: Create `MarketBaseScraper` (or equivalent) extracting common filtering/API logic from `mahsaneyHashuk.js`. 3048c21
+    - [x] Create `tests/market_base.test.js`.
+    - [x] Implement `MarketBaseScraper.js`.
 - [ ] Task: Refactor `mahsaneyHashuk.js` to use the new shared base.
     - [ ] Ensure existing tests pass.
     - [ ] Implement refactor.
