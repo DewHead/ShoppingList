@@ -14,15 +14,15 @@
     - [x] Implement sorting function.
 - [x] Task: Conductor - User Manual Verification 'Core Logic' (Protocol in workflow.md)
 
-## Phase 3: UI Implementation (Desktop)
-- [ ] Task: Create `ComparisonTable` component using MUI `Table` components.
-    - [ ] Implement header row with active stores.
-    - [ ] Implement data rows with hover highlighting.
-- [ ] Task: Implement "Cheapest Price" highlighting logic.
-    - [ ] Create `PriceCell` component that determines if it is the minimum in its row.
-    - [ ] Style cheapest price with bold green text and a badge.
-- [ ] Task: Integrate Settings state to filter columns based on active stores.
-- [ ] Task: Conductor - User Manual Verification 'UI Desktop' (Protocol in workflow.md)
+## Phase 3: UI Implementation (Desktop) [checkpoint: d4819a7]
+- [x] Task: Create `ComparisonTable` component using MUI `Table` components.
+    - [x] Implement header row with active stores.
+    - [x] Implement data rows with hover highlighting.
+- [x] Task: Implement "Cheapest Price" highlighting logic.
+    - [x] Create `PriceCell` component that determines if it is the minimum in its row.
+    - [x] Style cheapest price with bold green text and a badge.
+- [x] Task: Integrate Settings state to filter columns based on active stores.
+- [x] Task: Conductor - User Manual Verification 'UI Desktop' (Protocol in workflow.md)
 
 ## Phase 4: Mobile Optimization & Refinement
 - [ ] Task: Implement sticky first column for the product name using CSS/MUI.
