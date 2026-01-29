@@ -7,14 +7,14 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md) (8b9bedd)
 
 ## Phase 2: Scraper Implementation (TDD)
-- [ ] Task: Create unit tests for `KeshetTeamimScraper`.
-    - [ ] Mock the portal response and file downloads.
-    - [ ] Verify login flow with the `Keshet` username.
-    - [ ] Verify XML parsing for price and promo files.
-- [ ] Task: Implement `server/scrapers/keshetTeamim.js`.
-    - [ ] Extend `BaseScraper` and utilize `LevyBaseScraper`.
-    - [ ] Implement the `scrape` method following the Rami Levi pattern.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
+- [x] Task: Create unit tests for `KeshetTeamimScraper`. (283e6fb)
+    - [x] Mock the portal response and file downloads.
+    - [x] Verify login flow with the `Keshet` username.
+    - [x] Verify XML parsing for price and promo files.
+- [x] Task: Implement `server/scrapers/keshetTeamim.js`. (283e6fb)
+    - [x] Extend `BaseScraper` and utilize `LevyBaseScraper`.
+    - [x] Implement the `scrape` method following the Rami Levi pattern.
+- [x] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md) (283e6fb)
 
 ## Phase 3: System Integration and Verification
 - [ ] Task: Register the new scraper in the scraper factory/manager.
