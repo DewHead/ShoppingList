@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import SettingsPage from './SettingsPage';
 import { AppContext } from '../AppContext';
@@ -51,8 +51,20 @@ describe('SettingsPage', () => {
 
   it('uses the CSS class "settings-page-container" for the root element', async () => {
     const { container } = renderWithContext(<SettingsPage />);
-    // This is the specific class we plan to add in the CSS file
     const rootElement = container.querySelector('.settings-page-container');
     expect(rootElement).toBeInTheDocument();
+  });
+
+  it('renders General Settings card when Visual tab is selected', async () => {
+    const { getByText, findByText } = renderWithContext(<SettingsPage />);
+    
+    const visualTab = getByText('Visual');
+    
+    await act(async () => {
+      fireEvent.click(visualTab);
+    });
+    
+    const generalSettingsHeader = await findByText('General Settings');
+    expect(generalSettingsHeader).toBeInTheDocument();
   });
 });

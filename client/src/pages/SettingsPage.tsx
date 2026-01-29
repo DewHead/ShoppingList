@@ -27,6 +27,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { AppContext } from '../AppContext';
 import './SettingsPage.css';
+import SettingsCard from '../components/SettingsCard';
 
 const socket = io(API_BASE_URL);
 
@@ -220,98 +221,93 @@ const SettingsPage = () => {
           )}
 
           {activeTab === 1 && (
-            <Paper elevation={0} sx={{ p: 3, borderRadius: 3 }}>
-                <Typography variant="h6" sx={{ mb: 3, fontWeight: 700 }}>{language === 'he' ? 'הגדרות תצוגה' : 'Appearance Settings'}</Typography>
-
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Moon size={24} />
-                            <Box>
-                                <Typography variant="body1" sx={{ fontWeight: 600 }}>{language === 'he' ? 'מצב כהה' : 'Dark Mode'}</Typography>
-                                <Typography variant="caption" color="text.secondary">{language === 'he' ? 'שנה את ערכת הנושא של האפליקציה' : 'Toggle application theme'}</Typography>
-                            </Box>
-                        </Box>
-                        <Switch checked={isDark} onChange={toggleColorMode} color="primary" />
-                    </Box>
-
-                    <Divider />
-
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Languages size={24} />
-                            <Box>
-                                <Typography variant="body1" sx={{ fontWeight: 600 }}>{language === 'he' ? 'שפה' : 'Language'}</Typography>
-                                <Typography variant="caption" color="text.secondary">{language === 'he' ? 'בחר את שפת הממשק המועדפת עליך' : 'Select your preferred interface language'}</Typography>
-                            </Box>
-                        </Box>
-                        <Select
-                            value={language}
-                            size="small"
-                            onChange={(e) => toggleLanguage(e.target.value)}
-                            sx={{ minWidth: '120px' }}
-                        >
-                            <MenuItem value="he">עברית</MenuItem>
-                            <MenuItem value="en">English</MenuItem>
-                        </Select>
-                    </Box>
-
-                    <Divider />
-
-                    <Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                            <ImageIcon size={24} />
-                            <Box>
-                                <Typography variant="body1" sx={{ fontWeight: 600 }}>{language === 'he' ? 'רקע' : 'Background'}</Typography>
-                                <Typography variant="caption" color="text.secondary">{language === 'he' ? 'בחר את הרקע המועדף עליך' : 'Choose your favorite background'}</Typography>
-                            </Box>
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                            {backgroundOptions.map((option) => (
-                                <Box
-                                    key={option.name}
-                                    onClick={() => setBackground(option.name)}
-                                    sx={{
-                                        cursor: 'pointer',
-                                        borderRadius: 2,
-                                        border: '3px solid',
-                                        borderColor: background === option.name ? 'primary.main' : 'transparent',
-                                        overflow: 'hidden',
-                                        width: 150,
-                                        height: 100,
-                                        position: 'relative',
-                                        '&:hover': {
-                                            borderColor: 'primary.light',
-                                        },
-                                    }}
-                                >
-                                    <img src={option.thumbnail} alt={option.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    <Typography
-                                        variant="caption"
-                                        sx={{
-                                            position: 'absolute',
-                                            bottom: 0,
-                                            left: 0,
-                                            right: 0,
-                                            bgcolor: 'rgba(0,0,0,0.6)',
-                                            color: 'white',
-                                            textAlign: 'center',
-                                            p: 0.5,
-                                        }}
-                                    >
-                                        {t(option.name)}
-                                    </Typography>
+            <Box>
+                <SettingsCard title={language === 'he' ? 'הגדרות כלליות' : 'General Settings'}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Moon size={24} />
+                                <Box>
+                                    <Typography variant="body1" sx={{ fontWeight: 600 }}>{language === 'he' ? 'מצב כהה' : 'Dark Mode'}</Typography>
+                                    <Typography variant="caption" color="text.secondary">{language === 'he' ? 'שנה את ערכת הנושא של האפליקציה' : 'Toggle application theme'}</Typography>
                                 </Box>
-                            ))}
+                            </Box>
+                            <Switch checked={isDark} onChange={toggleColorMode} color="primary" />
+                        </Box>
+
+                        <Divider />
+
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Languages size={24} />
+                                <Box>
+                                    <Typography variant="body1" sx={{ fontWeight: 600 }}>{language === 'he' ? 'שפה' : 'Language'}</Typography>
+                                    <Typography variant="caption" color="text.secondary">{language === 'he' ? 'בחר את שפת הממשק המועדפת עליך' : 'Select your preferred interface language'}</Typography>
+                                </Box>
+                            </Box>
+                            <Select
+                                value={language}
+                                size="small"
+                                onChange={(e) => toggleLanguage(e.target.value)}
+                                sx={{ minWidth: '120px' }}
+                            >
+                                <MenuItem value="he">עברית</MenuItem>
+                                <MenuItem value="en">English</MenuItem>
+                            </Select>
                         </Box>
                     </Box>
-                </Box>
-            </Paper>
-          )}
-        </Box>
-      </Box>
-    </Box>
-  );
-};
-
+                                </SettingsCard>
+                
+                                <SettingsCard title={language === 'he' ? 'חזותי' : 'Appearance'} icon={<ImageIcon size={20} />}>
+                                    <Box>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                            {language === 'he' ? 'בחר את הרקע המועדף עליך' : 'Choose your favorite background'}
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: { xs: 'center', sm: 'flex-start' } }}>
+                                            {backgroundOptions.map((option) => (
+                                                <Box
+                                                    key={option.name}
+                                                    onClick={() => setBackground(option.name)}
+                                                    sx={{
+                                                        cursor: 'pointer',
+                                                        borderRadius: 2,
+                                                        border: '3px solid',
+                                                        borderColor: background === option.name ? 'primary.main' : 'transparent',
+                                                        overflow: 'hidden',
+                                                        width: { xs: 'calc(50% - 8px)', sm: 150 },
+                                                        height: 100,
+                                                        position: 'relative',
+                                                        '&:hover': {
+                                                            borderColor: 'primary.light',
+                                                        },
+                                                    }}
+                                                >
+                                                    <img src={option.thumbnail} alt={option.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    <Typography
+                                                        variant="caption"
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            bottom: 0,
+                                                            left: 0,
+                                                            right: 0,
+                                                            bgcolor: 'rgba(0,0,0,0.6)',
+                                                            color: 'white',
+                                                            textAlign: 'center',
+                                                            p: 0.5,
+                                                        }}
+                                                    >
+                                                        {t(option.name)}
+                                                    </Typography>
+                                                </Box>
+                                            ))}
+                                        </Box>
+                                    </Box>
+                                </SettingsCard>
+                            </Box>
+                          )}
+                        </Box>
+                      </Box>
+                    </Box>
+                  );
+                };
 export default SettingsPage;
