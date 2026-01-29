@@ -31,11 +31,11 @@
     - [x] Implement `victory.js`.
 - [x] Task: Conductor - User Manual Verification 'The "Market" Family' (Protocol in workflow.md) [checkpoint: 266ad77]
 
-## Phase 4: Fixing Shufersal
+## Phase 4: Fixing Shufersal [checkpoint: 473576e]
 - [x] Task: Fix `shufersal.js`. 25caa28
     - [x] Update `tests/shufersal_class.test.js` to reflect current site behavior (expect failure first).
     - [x] Update selectors/logic in `shufersal.js` to make tests pass.
-- [ ] Task: Conductor - User Manual Verification 'Fixing Shufersal' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Fixing Shufersal' (Protocol in workflow.md) [checkpoint: 473576e]
 
 ## Phase 5: Carrefour Implementation
 - [ ] Task: Implement `carrefour.js` (Restoration or New Implementation).
