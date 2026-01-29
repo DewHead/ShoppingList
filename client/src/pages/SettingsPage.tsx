@@ -149,22 +149,22 @@ const SettingsPage = () => {
 
         <Box className="settings-content">
           {activeTab === 0 && (
-            <Paper elevation={0} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+            <SettingsCard title={language === 'he' ? 'הגדרות חנות' : 'Store Settings'} icon={<Store size={20} />}>
                 <List sx={{ p: 0 }}>
                 {supermarkets.map((s, index) => (
                     <ListItem
                         key={s.id}
                         sx={{
-                        p: 2,
-                        display: 'grid',
-                        gridTemplateColumns: '1fr auto auto auto auto',
-                        alignItems: 'center',
+                        p: { xs: 1.5, sm: 2 },
+                        display: 'flex',
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        alignItems: { xs: 'flex-start', sm: 'center' },
                         gap: 2,
                         borderBottom: index < supermarkets.length - 1 ? '1px solid' : 'none',
                         borderColor: 'divider',
                         }}
                     >
-                        <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, flexGrow: 1, width: '100%' }}>
                             <Typography
                                 variant="h6"
                                 title={s.name}
@@ -185,39 +185,49 @@ const SettingsPage = () => {
                             </Typography>
                         </Box>
 
-                        <Tooltip title={language === 'he' ? 'התחל גרידה עבור חנות זו' : 'Start Scrape for This Store'}>
-                            <Box component="span" sx={{ display: 'inline-block', bgcolor: theme.palette.mode === 'dark' ? 'rgba(103, 58, 183, 0.1)' : 'rgba(103, 58, 183, 0.05)', borderRadius: '50%' }}>
+                        <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1.5, 
+                            width: { xs: '100%', sm: 'auto' },
+                            justifyContent: { xs: 'flex-end', sm: 'flex-start' },
+                            mt: { xs: 1, sm: 0 }
+                        }}>
+                            <Tooltip title={language === 'he' ? 'התחל גרידה עבור חנות זו' : 'Start Scrape for This Store'}>
+                                <Box component="span" sx={{ display: 'inline-block', bgcolor: theme.palette.mode === 'dark' ? 'rgba(103, 58, 183, 0.1)' : 'rgba(103, 58, 183, 0.05)', borderRadius: '50%' }}>
+                                    <IconButton
+                                        onClick={() => handleScrapeStore(s.id)}
+                                        color="primary"
+                                        disabled={!s.is_active || (!!scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' && !scrapingStates[s.id].startsWith('Error'))}
+                                        size="small"
+                                    >
+                                        {(!!scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' && !scrapingStates[s.id].startsWith('Error')) ? <CircularProgress size={20} /> : <Play size={20} />}
+                                    </IconButton>
+                                </Box>
+                            </Tooltip>
+
+                            <Tooltip title={language === 'he' ? 'הצג נתונים שנאספו' : 'Show Scraped Data'}>
                                 <IconButton
-                                    onClick={() => handleScrapeStore(s.id)}
+                                    onClick={() => navigate(`/scraped-data/${s.id}`)}
                                     color="primary"
-                                    disabled={!s.is_active || (!!scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' && !scrapingStates[s.id].startsWith('Error'))}
+                                    size="small"
+                                    sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(103, 58, 183, 0.1)' : 'rgba(103, 58, 183, 0.05)' }}
                                 >
-                                    {(!!scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' && !scrapingStates[s.id].startsWith('Error')) ? <CircularProgress size={20} /> : <Play size={20} />}
+                                    <ListAltIcon fontSize="small" />
                                 </IconButton>
-                            </Box>
-                        </Tooltip>
+                            </Tooltip>
 
-                        <Tooltip title={language === 'he' ? 'הצג נתונים שנאספו' : 'Show Scraped Data'}>
-                            <IconButton
-                                onClick={() => navigate(`/scraped-data/${s.id}`)}
-                                color="primary"
-                                sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(103, 58, 183, 0.1)' : 'rgba(103, 58, 183, 0.05)' }}
-                            >
-                                <ListAltIcon />
-                            </IconButton>
-                        </Tooltip>
-
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <Switch
                                 checked={s.is_active === 1}
                                 onChange={(e) => handleUpdate(s.id, 'is_active', e.target.checked ? 1 : 0)}
                                 color="primary"
+                                size="small"
                             />
                         </Box>
                     </ListItem>
                 ))}
                 </List>
-            </Paper>
+            </SettingsCard>
           )}
 
           {activeTab === 1 && (

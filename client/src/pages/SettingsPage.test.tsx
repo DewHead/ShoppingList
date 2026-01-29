@@ -67,4 +67,9 @@ describe('SettingsPage', () => {
     const generalSettingsHeader = await findByText('General Settings');
     expect(generalSettingsHeader).toBeInTheDocument();
   });
+
+  it('renders Store Settings card by default', async () => {
+    const { getByText } = renderWithContext(<SettingsPage />);
+    expect(getByText('Store Settings')).toBeInTheDocument();
+  });
 });
