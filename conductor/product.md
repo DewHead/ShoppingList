@@ -21,7 +21,7 @@ The user wants to build a Shopping List application with integrated price scrapi
 - **Responsive Configuration:** A card-based settings interface optimized for mobile ergonomics, providing clear grouping of scraper and application preferences.
 - **Contextual Optimization:** A sticky bottom summary bar on mobile that opens a detailed optimization drawer, and a sticky asymmetrical side panel on desktop.
 - **Interactive List:** Mobile-first interactions including swipe-to-delete and swipe-to-toggle for efficient list management.
-- **Data Visualization:** Summary cards and color-coded highlighting to provide immediate insights into price comparisons.
+- **Data Visualization:** A comprehensive Price Comparison Matrix allowing side-by-side store price analysis, with visual highlighting for the cheapest options per product. Summary cards and color-coded highlighting provide immediate insights into price comparisons.
 - **Clean Layout:** Collapsible price breakdowns and constrained heights for optimization data to maintain focus on list management.
 - **Efficient Input:** A Floating Action Button (FAB) that opens a focused input sheet for adding items quickly.
 
