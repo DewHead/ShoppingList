@@ -119,7 +119,7 @@ async function initDb() {
       { name: 'יוחננוף (דיזיין פלוס)', url: 'https://yochananof.co.il/' },
       { name: 'ויקטורי (שדרות דויד בן גוריון)', url: 'https://www.victoryonline.co.il/' },
       { name: 'קרפור מרקט (נווה זאב)', url: 'https://www.carrefour.co.il/' },
-      { name: 'קשת טעמים (ישפרו פלאנט)', url: 'https://www.keshet-teamim.co.il/' },
+      { name: 'קשת טעמים (ישפרו פלאנט)', url: 'https://url.publishedprices.co.il/login' },
       { name: 'טאיו (חיים יחיל)', url: 'https://tayo.co.il/' },
       { name: 'מחסני השוק (כללי)', url: 'https://www.mahsaneyshak.co.il/online' } 
     ];
