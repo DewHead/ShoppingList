@@ -37,11 +37,11 @@
     - [x] Update selectors/logic in `shufersal.js` to make tests pass.
 - [x] Task: Conductor - User Manual Verification 'Fixing Shufersal' (Protocol in workflow.md) [checkpoint: 473576e]
 
-## Phase 5: Carrefour Implementation
+## Phase 5: Carrefour Implementation [checkpoint: f459a4b]
 - [x] Task: Implement `carrefour.js` (Restoration or New Implementation). 3a260bc
     - [x] Create `tests/carrefour.test.js`.
     - [x] Implement `carrefour.js` (using retrieved code or fresh logic).
-- [ ] Task: Conductor - User Manual Verification 'Carrefour Implementation' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Carrefour Implementation' (Protocol in workflow.md) [checkpoint: f459a4b]
 
 ## Phase 6: Integration & Final Polish
 - [ ] Task: Register new scrapers in `server/scraper.js` (or main entry point).
