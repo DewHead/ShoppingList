@@ -43,7 +43,7 @@
     - [x] Implement `carrefour.js` (using retrieved code or fresh logic).
 - [x] Task: Conductor - User Manual Verification 'Carrefour Implementation' (Protocol in workflow.md) [checkpoint: f459a4b]
 
-## Phase 6: Integration & Final Polish
+## Phase 6: Integration & Final Polish [checkpoint: f1af317]
 - [x] Task: Register new scrapers in `server/scraper.js` (or main entry point). f8e5777
 - [x] Task: Verify standardized output format across all 5 scrapers. f8e5777
-- [ ] Task: Conductor - User Manual Verification 'Integration & Final Polish' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Integration & Final Polish' (Protocol in workflow.md) [checkpoint: f1af317]
