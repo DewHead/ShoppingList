@@ -7,9 +7,9 @@
 
 ## Phase 2: Component Refactoring (MUI Cards & Layout)
 - [x] Task: Implement `SettingsCard` wrapper component using MUI `Card` for consistent grouping. [b45f9d1]
-- [ ] Task: Refactor "General Settings" section (Language, Theme) into a mobile-friendly card.
-- [ ] Task: Refactor "Appearance" section (Background Selection) with responsive grid previews.
-- [ ] Task: Refactor "Scraper Configuration" section to use vertically stacked inputs on mobile.
+- [x] Task: Refactor "General Settings" section (Language, Theme) into a mobile-friendly card. [4f07edf]
+- [x] Task: Refactor "Appearance" section (Background Selection) with responsive grid previews. [4f07edf]
+- [~] Task: Refactor "Scraper Configuration" section to use vertically stacked inputs on mobile.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Component Refactoring' (Protocol in workflow.md)
 
 ## Phase 3: Touch Optimization & UX Polish
