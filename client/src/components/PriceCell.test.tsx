@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import PriceCell from './PriceCell';
-import { PriceInfo } from '../utils/comparisonUtils';
+import type { PriceInfo } from '../utils/comparisonUtils';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 
 // Mock translation

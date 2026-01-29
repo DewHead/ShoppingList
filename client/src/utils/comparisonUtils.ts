@@ -126,8 +126,7 @@ export const transformToMatrix = (
     const prices: Record<number, PriceInfo> = {};
     const validPrices: number[] = [];
 
-    // First pass: Collect all prices for this item to find the minimum
-    Object.entries(storeResults).forEach(([storeId, data]) => {
+    Object.values(storeResults).forEach((data) => {
       const results = data.results || [];
       const match = results.find((r: any) => r.item.itemName === listItem.itemName);
       

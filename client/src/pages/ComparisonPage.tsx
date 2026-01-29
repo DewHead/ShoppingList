@@ -12,7 +12,6 @@ import {
   List,
   ListItem
 } from '@mui/material';
-import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import CloseIcon from '@mui/icons-material/Close';
 import axios from 'axios';
 import { io } from 'socket.io-client';
@@ -21,7 +20,7 @@ import { API_BASE_URL } from '../config';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { AppContext } from '../AppContext';
-import { calculateSmartTotal, transformToMatrix, sortComparisonMatrix, type ComparisonMatrixRow } from '../utils/comparisonUtils';
+import { calculateSmartTotal, transformToMatrix, sortComparisonMatrix } from '../utils/comparisonUtils';
 import ComparisonSummary from '../components/ComparisonSummary';
 import ComparisonTable from '../components/ComparisonTable';
 import './ComparisonPage.css';
@@ -32,11 +31,10 @@ const ComparisonPage = () => {
   const theme = useTheme();
   const { t, language } = useTranslation();
   const { showCreditCardPromos } = useContext(AppContext);
-  const [loading, setLoading] = useState(false);
   const [storeStatuses, setStoreStatuses] = useState<Record<number, string>>({});
   const [storeResults, setStoreResults] = useState<Record<number, any>>({});
   const [supermarkets, setSupermarkets] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [activeCoupons, setActiveCoupons] = useState<{ storeName: string, coupons: any[] } | null>(null);
   const [localShoppingListItems, setLocalShoppingListItems] = useState<any[]>([]);
   const [, setTick] = useState(0); 
@@ -66,10 +64,10 @@ const ComparisonPage = () => {
     }
   }, []);
 
-  const fetchComparisonData = useCallback(async (showCreditCardPromos) => {
+  const fetchComparisonData = useCallback(async (creditCardPromos: boolean) => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/comparison`, {
-        params: { showSbox: showCreditCardPromos }
+        params: { showSbox: creditCardPromos }
       });
       setStoreResults(res.data);
     } catch (err) {
@@ -82,28 +80,35 @@ const ComparisonPage = () => {
     fetchShoppingList();
     fetchComparisonData(showCreditCardPromos);
 
-    socket.on('status', (data) => {
+    socket.on('storeStatus', (data: { storeId: number; status: string }) => {
       setStoreStatuses(prev => ({ ...prev, [data.storeId]: data.status }));
     });
 
-    socket.on('results', (data) => {
-      setStoreStatuses(prev => ({ ...prev, [data.storeId]: 'Done' }));
+    socket.on('results', () => {
+      // Results event confirms the database has been updated for this store
       fetchComparisonData(showCreditCardPromos); 
       fetchSupermarkets(); 
-      setLoading(false);
     });
 
     const interval = setInterval(() => setTick(t => t + 1), 60000);
 
     return () => {
-      socket.off('status');
+      socket.off('storeStatus');
       socket.off('results');
       clearInterval(interval);
     };
   }, [fetchSupermarkets, fetchShoppingList, fetchComparisonData, showCreditCardPromos]);
 
+  // Derived loading state: true if any active store has a status that isn't terminal
+  const isRefreshing = useMemo(() => {
+    const activeStoreIds = supermarkets.filter(s => s.is_active).map(s => s.id);
+    return activeStoreIds.some(id => {
+      const status = storeStatuses[id];
+      return status && status !== 'Done' && !status.startsWith('Error');
+    });
+  }, [supermarkets, storeStatuses]);
+
   const startComparison = async () => {
-    setLoading(true);
     setError(null);
     const activeStoreIds = supermarkets.filter(s => s.is_active).map(s => s.id);
     const newStatuses = { ...storeStatuses };
@@ -115,12 +120,11 @@ const ComparisonPage = () => {
       await axios.post(`${API_BASE_URL}/api/scrape`);
     } catch (err: any) {
       setError('Failed to start comparison');
-      setLoading(false);
     }
   };
 
   const getLastRefreshText = () => {
-    if (loading) return null;
+    if (isRefreshing) return null;
 
     const activeSupermarkets = supermarkets.filter(s => s.is_active && s.last_scrape_time);
     if (activeSupermarkets.length === 0) return null;
@@ -208,10 +212,10 @@ const ComparisonPage = () => {
             <Button 
             variant="contained" 
             onClick={startComparison}
-            disabled={loading}
+            disabled={isRefreshing}
             sx={{ py: 1.5, px: 4, borderRadius: 2, fontWeight: 600 }}
             >
-            {loading ? t('refreshing') : t('refreshPrices')}
+            {isRefreshing ? t('refreshing') : t('refreshPrices')}
             </Button>
             {getLastRefreshText() && (
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
@@ -245,6 +249,7 @@ const ComparisonPage = () => {
           activeStores={activeStores}
           onSort={handleSort}
           sortConfig={sortConfig}
+          storeStatuses={storeStatuses}
         />
       </Box>
 

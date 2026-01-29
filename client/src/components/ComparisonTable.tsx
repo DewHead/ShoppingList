@@ -9,8 +9,11 @@ import {
   Paper, 
   TableSortLabel,
   Box,
-  Typography
+  Typography,
+  CircularProgress,
+  Tooltip
 } from '@mui/material';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import type { ComparisonMatrixRow } from '../utils/comparisonUtils';
 import PriceCell from './PriceCell';
 import { useTranslation } from '../useTranslation';
@@ -25,19 +28,31 @@ interface ComparisonTableProps {
   activeStores: Store[];
   onSort: (columnId: 'product' | number, direction: 'asc' | 'desc') => void;
   sortConfig: { key: 'product' | number; direction: 'asc' | 'desc' };
+  storeStatuses?: Record<number, string>;
 }
 
 const ComparisonTable: React.FC<ComparisonTableProps> = ({ 
   data, 
   activeStores, 
   onSort, 
-  sortConfig 
+  sortConfig,
+  storeStatuses = {}
 }) => {
   const { t } = useTranslation();
 
   const createSortHandler = (property: 'product' | number) => () => {
     const isAsc = sortConfig.key === property && sortConfig.direction === 'asc';
     onSort(property, isAsc ? 'desc' : 'asc');
+  };
+
+  const getStoreStatus = (storeId: number) => {
+    const status = storeStatuses[storeId];
+    if (!status) return null;
+    
+    const isError = status.startsWith('Error');
+    const isLoading = status !== 'Done' && !isError;
+    
+    return { status, isError, isLoading };
   };
 
   return (
@@ -70,25 +85,42 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
                 {t('product')}
               </TableSortLabel>
             </TableCell>
-            {activeStores.map((store) => (
-              <TableCell 
-                key={store.id} 
-                align="center"
-                sx={{ 
-                  fontWeight: 'bold', 
-                  minWidth: 120,
-                  backgroundColor: 'background.paper'
-                }}
-              >
-                <TableSortLabel
-                  active={sortConfig.key === store.id}
-                  direction={sortConfig.key === store.id ? sortConfig.direction : 'asc'}
-                  onClick={createSortHandler(store.id)}
+            {activeStores.map((store) => {
+              const statusInfo = getStoreStatus(store.id);
+              return (
+                <TableCell 
+                  key={store.id} 
+                  align="center"
+                  sx={{ 
+                    fontWeight: 'bold', 
+                    minWidth: 120,
+                    backgroundColor: 'background.paper'
+                  }}
                 >
-                  {store.name}
-                </TableSortLabel>
-              </TableCell>
-            ))}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <TableSortLabel
+                      active={sortConfig.key === store.id}
+                      direction={sortConfig.key === store.id ? sortConfig.direction : 'asc'}
+                      onClick={createSortHandler(store.id)}
+                    >
+                      {store.name}
+                    </TableSortLabel>
+                    
+                    {statusInfo?.isLoading && (
+                      <Tooltip title={statusInfo.status}>
+                        <CircularProgress size={16} sx={{ mt: 0.5 }} />
+                      </Tooltip>
+                    )}
+                    
+                    {statusInfo?.isError && (
+                      <Tooltip title={statusInfo.status}>
+                        <ErrorOutlineIcon color="error" sx={{ fontSize: 18, mt: 0.5 }} />
+                      </Tooltip>
+                    )}
+                  </Box>
+                </TableCell>
+              );
+            })}
           </TableRow>
         </TableHead>
         <TableBody>
@@ -113,11 +145,20 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
                   {row.productName}
                 </Typography>
               </TableCell>
-              {activeStores.map((store) => (
-                <TableCell key={store.id} align="center" padding="none">
-                  <PriceCell priceInfo={row.prices[store.id]} />
-                </TableCell>
-              ))}
+              {activeStores.map((store) => {
+                const statusInfo = getStoreStatus(store.id);
+                return (
+                  <TableCell key={store.id} align="center" padding="none">
+                    {statusInfo?.isLoading ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', p: 1 }}>
+                        <CircularProgress size={20} color="inherit" sx={{ opacity: 0.3 }} />
+                      </Box>
+                    ) : (
+                      <PriceCell priceInfo={row.prices[store.id]} />
+                    )}
+                  </TableCell>
+                );
+              })}
             </TableRow>
           ))}
           {data.length === 0 && (

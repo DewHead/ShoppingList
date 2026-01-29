@@ -16,20 +16,20 @@ The goal is to transition from sequential store scraping to concurrent execution
 ## Phase 2: Frontend Granular Feedback
 The goal is to update the UI to handle and display multiple stores refreshing at once.
 
-- [ ] Task: Enhance store status management in `client/src/pages/ComparisonPage.tsx`.
+- [x] Task: Enhance store status management in `client/src/pages/ComparisonPage.tsx`.
     - Update `storeStatuses` and `loading` states to better handle overlapping Socket.io events.
     - Implement an `errors` state for stores that fail to refresh.
-- [ ] Task: Add individual loading indicators to `client/src/components/ComparisonTable.tsx`.
+- [x] Task: Add individual loading indicators to `client/src/components/ComparisonTable.tsx`.
     - Modify the table to show a loading state (e.g., Skeleton or Spinner) in the columns of stores currently being scraped.
-- [ ] Task: Update the "Refresh Prices" button logic.
+- [x] Task: Update the "Refresh Prices" button logic.
     - Ensure it remains disabled as long as *any* store is still refreshing.
-- [ ] Task: Implement partial failure UI.
+- [x] Task: Implement partial failure UI.
     - Add error icons/tooltips to store headers in the table if their last refresh failed.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Frontend Granular Feedback' (Protocol in workflow.md)
 
 ## Phase 3: Verification & Polish
-- [ ] Task: Verify end-to-end simultaneous refresh.
+- [x] Task: Verify end-to-end simultaneous refresh.
     - Confirm that multiple store columns update independently and in parallel.
-- [ ] Task: Performance and Resource Audit.
+- [x] Task: Performance and Resource Audit.
     - Observe system resource usage (RAM/CPU) while all scrapers run in parallel and ensure stability.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Verification & Polish' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Verification & Polish' (Protocol in workflow.md) [checkpoint: 94d5061]

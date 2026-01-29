@@ -1,5 +1,5 @@
 import React from 'react';
-import { Typography, Box, Tooltip, Chip, useTheme } from '@mui/material';
+import { Typography, Box, Tooltip, Chip } from '@mui/material';
 import type { PriceInfo } from '../utils/comparisonUtils';
 import StarIcon from '@mui/icons-material/Star';
 import { useTranslation } from '../useTranslation';
@@ -9,7 +9,6 @@ interface PriceCellProps {
 }
 
 const PriceCell: React.FC<PriceCellProps> = ({ priceInfo }) => {
-  const theme = useTheme();
   const { t } = useTranslation();
 
   if (!priceInfo) {
@@ -20,7 +19,7 @@ const PriceCell: React.FC<PriceCellProps> = ({ priceInfo }) => {
     );
   }
 
-  const { price, displayPrice, isCheapest, status, promo, link } = priceInfo;
+  const { displayPrice, isCheapest, status, promo } = priceInfo;
 
   if (status === 'missing') {
     return (

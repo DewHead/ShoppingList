@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { calculateSmartTotal, PENALTY_PRICE, transformToMatrix, ComparisonMatrixRow, sortComparisonMatrix } from './comparisonUtils';
+import { calculateSmartTotal, PENALTY_PRICE, transformToMatrix, sortComparisonMatrix } from './comparisonUtils';
+import type { ComparisonMatrixRow } from './comparisonUtils';
 
 describe('calculateSmartTotal', () => {
   it('calculates total for valid items', () => {

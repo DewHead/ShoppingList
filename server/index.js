@@ -121,8 +121,34 @@ async function updateFtsIndex(storeId) {
     }
 }
 
+// Queue for database operations to avoid concurrent transaction errors
+const dbQueue = [];
+let isProcessingQueue = false;
+
+async function processDbQueue() {
+  if (isProcessingQueue || dbQueue.length === 0) return;
+  isProcessingQueue = true;
+  while (dbQueue.length > 0) {
+    const { storeId, products, promos, resolve, reject } = dbQueue.shift();
+    try {
+      await performSaveDiscoveryResults(storeId, products, promos);
+      resolve();
+    } catch (err) {
+      reject(err);
+    }
+  }
+  isProcessingQueue = false;
+}
+
 // Helper to save discovery results directly from server-side scraper
 async function saveDiscoveryResults(storeId, products, promos) {
+  return new Promise((resolve, reject) => {
+    dbQueue.push({ storeId, products, promos, resolve, reject });
+    processDbQueue();
+  });
+}
+
+async function performSaveDiscoveryResults(storeId, products, promos) {
   try {
     if (products && products.length > 0) {
       console.log(`Directly saving ${products.length} discovered items from store ${storeId}...`);
@@ -208,6 +234,7 @@ async function saveDiscoveryResults(storeId, products, promos) {
         try { await db.run('ROLLBACK'); } catch (e) {}
     }
     console.error('Error saving discovery data:', err.message);
+    throw err;
   }
 }
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ComparisonTable from './ComparisonTable';
-import { ComparisonMatrixRow } from '../utils/comparisonUtils';
+import type { ComparisonMatrixRow } from '../utils/comparisonUtils';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 
 // Mock translation
