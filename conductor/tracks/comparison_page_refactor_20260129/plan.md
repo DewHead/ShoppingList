@@ -24,11 +24,11 @@
 - [x] Task: Integrate Settings state to filter columns based on active stores.
 - [x] Task: Conductor - User Manual Verification 'UI Desktop' (Protocol in workflow.md)
 
-## Phase 4: Mobile Optimization & Refinement
-- [ ] Task: Implement sticky first column for the product name using CSS/MUI.
-- [ ] Task: Add horizontal scrolling for the store columns on mobile breakpoints.
-- [ ] Task: Final styling polish to ensure "modern" look (padding, typography, colors).
-- [ ] Task: Conductor - User Manual Verification 'Mobile & Polish' (Protocol in workflow.md)
+## Phase 4: Mobile Optimization & Refinement [checkpoint: a8e0614]
+- [x] Task: Implement sticky first column for the product name using CSS/MUI.
+- [x] Task: Add horizontal scrolling for the store columns on mobile breakpoints.
+- [x] Task: Final styling polish to ensure "modern" look (padding, typography, colors).
+- [x] Task: Conductor - User Manual Verification 'Mobile & Polish' (Protocol in workflow.md)
 
 ## Phase 5: Verification & Cleanup
 - [ ] Task: Run full suite of unit and integration tests.
