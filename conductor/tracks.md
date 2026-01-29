@@ -16,3 +16,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Shopping List Layout Refinement**
   *Link: [./tracks/layout_refinement_20260128/](./tracks/layout_refinement_20260128/)*
+
+---
+
+- [x] **Track: refactoring of the settings page to be mobile friendly as well**
+*Link: [./tracks/settings_mobile_20260129/](./tracks/settings_mobile_20260129/)*
