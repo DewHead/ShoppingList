@@ -7,7 +7,7 @@
 - [x] Task: Search git history/logs for previous existence of `carrefour.js` to potentially restore it. 172cd48
 - [x] Task: Conductor - User Manual Verification 'Discovery & Strategy' (Protocol in workflow.md) [checkpoint: 537963e]
 
-## Phase 2: The "Levy" Family (Rami Levy & Yohananof)
+## Phase 2: The "Levy" Family (Rami Levy & Yohananof) [checkpoint: 2de2341]
 - [x] Task: Create `LevyBaseScraper` (or equivalent utility) extracting authentication and navigation logic from `ramiLevy.js`. f1df54e
     - [x] Create test file `tests/levy_base.test.js` to verify shared logic.
     - [x] Implement `LevyBaseScraper.js`.
@@ -17,7 +17,7 @@
 - [x] Task: Implement `yohananof.js` using the shared base/utility. a705922
     - [x] Create `tests/yohananof.test.js`.
     - [x] Implement `yohananof.js`.
-- [ ] Task: Conductor - User Manual Verification 'The "Levy" Family' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'The "Levy" Family' (Protocol in workflow.md) [checkpoint: 2de2341]
 
 ## Phase 3: The "Market" Family (Mahsaney Hashuk & Victory)
 - [ ] Task: Create `MarketBaseScraper` (or equivalent) extracting common filtering/API logic from `mahsaneyHashuk.js`.
