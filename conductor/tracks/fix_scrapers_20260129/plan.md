@@ -19,7 +19,7 @@
     - [x] Implement `yohananof.js`.
 - [x] Task: Conductor - User Manual Verification 'The "Levy" Family' (Protocol in workflow.md) [checkpoint: 2de2341]
 
-## Phase 3: The "Market" Family (Mahsaney Hashuk & Victory)
+## Phase 3: The "Market" Family (Mahsaney Hashuk & Victory) [checkpoint: 266ad77]
 - [x] Task: Create `MarketBaseScraper` (or equivalent) extracting common filtering/API logic from `mahsaneyHashuk.js`. 3048c21
     - [x] Create `tests/market_base.test.js`.
     - [x] Implement `MarketBaseScraper.js`.
@@ -29,7 +29,7 @@
 - [x] Task: Implement `victory.js` using the shared base. 6e319bf
     - [x] Create `tests/victory.test.js`.
     - [x] Implement `victory.js`.
-- [ ] Task: Conductor - User Manual Verification 'The "Market" Family' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'The "Market" Family' (Protocol in workflow.md) [checkpoint: 266ad77]
 
 ## Phase 4: Fixing Shufersal
 - [ ] Task: Fix `shufersal.js`.
