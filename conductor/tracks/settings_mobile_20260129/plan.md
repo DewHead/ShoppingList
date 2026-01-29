@@ -12,12 +12,12 @@
 - [x] Task: Refactor "Scraper Configuration" section to use vertically stacked inputs on mobile. [1d90917]
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Component Refactoring' (Protocol in workflow.md)
 
-## Phase 3: Touch Optimization & UX Polish
+## Phase 3: Touch Optimization & UX Polish [checkpoint: f285c56]
 - [x] Task: Ensure all buttons, switches, and select inputs meet 44x44px touch target standards. [4dc1171]
 - [x] Task: Implement focused editing mode or auto-expanding textareas for complex CSS selectors. [N/A - No such fields in current UI]
 - [x] Task: Verify RTL (Hebrew) layout consistency across all new cards and inputs. [f3bf4d7]
 - [x] Task: Integrate "Back" navigation or ensure synergy with the existing `BottomNav`. [dac40fc]
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Touch Optimization & UX Polish' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Touch Optimization & UX Polish' (Protocol in workflow.md)
 
 ## Phase 4: Verification & Finalization
 - [ ] Task: Run full suite of automated tests for Settings page functionality.
