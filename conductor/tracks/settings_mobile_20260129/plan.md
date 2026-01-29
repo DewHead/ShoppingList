@@ -6,7 +6,7 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Analysis & Infrastructure' (Protocol in workflow.md)
 
 ## Phase 2: Component Refactoring (MUI Cards & Layout)
-- [ ] Task: Implement `SettingsCard` wrapper component using MUI `Card` for consistent grouping.
+- [x] Task: Implement `SettingsCard` wrapper component using MUI `Card` for consistent grouping. [b45f9d1]
 - [ ] Task: Refactor "General Settings" section (Language, Theme) into a mobile-friendly card.
 - [ ] Task: Refactor "Appearance" section (Background Selection) with responsive grid previews.
 - [ ] Task: Refactor "Scraper Configuration" section to use vertically stacked inputs on mobile.
