@@ -11,9 +11,9 @@
 - [x] Task: Create `LevyBaseScraper` (or equivalent utility) extracting authentication and navigation logic from `ramiLevy.js`. f1df54e
     - [x] Create test file `tests/levy_base.test.js` to verify shared logic.
     - [x] Implement `LevyBaseScraper.js`.
-- [ ] Task: Refactor `ramiLevy.js` to use the new shared base/utility.
-    - [ ] Update `tests/ramiLevy.test.js` to ensure no regression.
-    - [ ] Implement refactor.
+- [x] Task: Refactor `ramiLevy.js` to use the new shared base/utility. 154ef9f
+    - [x] Update `tests/ramiLevy.test.js` to ensure no regression.
+    - [x] Implement refactor.
 - [ ] Task: Implement `yohananof.js` using the shared base/utility.
     - [ ] Create `tests/yohananof.test.js`.
     - [ ] Implement `yohananof.js`.
