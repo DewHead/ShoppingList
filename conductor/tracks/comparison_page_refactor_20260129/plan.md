@@ -5,14 +5,14 @@
 - [x] Task: Define TypeScript interfaces for the new table data structure (Matrix row: `productName`, `prices: Record<storeId, price>`).
 - [x] Task: Conductor - User Manual Verification 'Preparation' (Protocol in workflow.md)
 
-## Phase 2: Core Table Logic & State Management
-- [ ] Task: Update `comparisonUtils.ts` to transform scraped data into a matrix format suitable for the table.
-    - [ ] Write tests for `transformToMatrix` function.
-    - [ ] Implement `transformToMatrix` handling "N/A" values.
-- [ ] Task: Implement sorting logic for the matrix data.
-    - [ ] Write tests for sorting by product name and store price.
-    - [ ] Implement sorting function.
-- [ ] Task: Conductor - User Manual Verification 'Core Logic' (Protocol in workflow.md)
+## Phase 2: Core Table Logic & State Management [checkpoint: 9bb54f7]
+- [x] Task: Update `comparisonUtils.ts` to transform scraped data into a matrix format suitable for the table.
+    - [x] Write tests for `transformToMatrix` function.
+    - [x] Implement `transformToMatrix` handling "N/A" values.
+- [x] Task: Implement sorting logic for the matrix data.
+    - [x] Write tests for sorting by product name and store price.
+    - [x] Implement sorting function.
+- [x] Task: Conductor - User Manual Verification 'Core Logic' (Protocol in workflow.md)
 
 ## Phase 3: UI Implementation (Desktop)
 - [ ] Task: Create `ComparisonTable` component using MUI `Table` components.
