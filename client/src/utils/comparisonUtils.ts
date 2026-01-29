@@ -5,6 +5,20 @@ export interface ComparisonResult {
   [key: string]: any;
 }
 
+export interface PriceInfo {
+  price: number;
+  displayPrice: string;
+  promo?: string;
+  isCheapest: boolean;
+  status: 'available' | 'missing';
+  link?: string;
+}
+
+export interface ComparisonMatrixRow {
+  productName: string;
+  prices: Record<number, PriceInfo>; // Key is storeId
+}
+
 export const PENALTY_PRICE = 15 * 1.2;
 
 export const calculateSmartTotal = (results: ComparisonResult[] | undefined) => {
