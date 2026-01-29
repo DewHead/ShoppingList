@@ -4,6 +4,7 @@ const ShufersalScraper = require('./scrapers/shufersal');
 const RamiLevyScraper = require('./scrapers/ramiLevy');
 const MahsaneyHashukScraper = require('./scrapers/mahsaneyHashuk');
 const YohananofScraper = require('./scrapers/yohananof');
+const KeshetTeamimScraper = require('./scrapers/keshetTeamim');
 const VictoryScraper = require('./scrapers/victory');
 const CarrefourScraper = require('./scrapers/carrefour');
 
@@ -28,6 +29,8 @@ async function scrapeStore(supermarket, items, io, onResults) {
       scraper = new ShufersalScraper(supermarket, io);
     } else if (name.includes('יוחננוף')) {
       scraper = new YohananofScraper(supermarket, io);
+    } else if (name.includes('קשת טעמים')) {
+      scraper = new KeshetTeamimScraper(supermarket, io);
     } else if (url.includes('publishedprices.co.il') || name.includes('רמי לוי')) {
       scraper = new RamiLevyScraper(supermarket, io);
     } else if (name.includes('ויקטורי')) {
