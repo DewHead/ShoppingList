@@ -16,52 +16,101 @@ class CarrefourScraper extends BaseScraper {
     const allDiscoveredPromos = [];
 
     try {
-      await page.goto(transparencyWebsiteUrl, { waitUntil: 'networkidle', timeout: 60000 });
+      await page.goto(transparencyWebsiteUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-      // Target Store: 5304
-      this.emitStatus(`Filtering for store 5304...`);
-      await page.selectOption('#ddlStore', '5304'); 
-      await randomDelay(3000, 5000); 
-
-      await page.selectOption('#ddlCategory', '0'); // "All" categories
-      await randomDelay(2000, 3000);
-
-      const pageFileLinks = await page.$$eval('table.webgrid tbody tr', (rows) => {
-        const links = [];
-        rows.forEach(row => {
-          const downloadLink = row.querySelector('td:first-child a[href*=".gz"]');
-          const branchCell = row.querySelector('td:nth-child(6)');
-          const branchText = branchCell ? branchCell.innerText.trim() : '';
-          
-          if (downloadLink) {
-            const href = downloadLink.href;
-            let type = 'OTHER';
-            if (href.includes('PriceFull')) type = 'PRICE_FULL';
-            else if (href.includes('Price')) type = 'PRICE';
-            else if (href.includes('PromoFull')) type = 'PROMO_FULL';
-            else if (href.includes('Promo')) type = 'PROMO';
-            
-            if (type !== 'OTHER' && !href.includes('Stores')) {
-                const tsMatch = href.match(/-(\d{12})\.gz/);
-                const timestamp = tsMatch ? tsMatch[1] : '0';
-                links.push({ url: href, branchName: branchText, type, timestamp });
-            }
-          }
-        });
-        return links;
+      // Extract data directly from the page's JavaScript variables
+      const pageData = await page.evaluate(() => {
+        // @ts-ignore
+        if (typeof files !== 'undefined' && typeof branches !== 'undefined') {
+          return { files, branches };
+        }
+        return null;
       });
 
-      const latestPriceFull = pageFileLinks
+      if (!pageData) {
+        throw new Error('Could not find "files" or "branches" variables on the page.');
+      }
+
+      const { files, branches } = pageData;
+      
+      // Determine target branch ID
+      let branchId = '3700'; // Default to Neve Zeev as per previous logs
+      // Try to find a matching branch based on supermarket name if possible
+      const storeName = this.supermarket.name || '';
+      // Clean up store name for matching (remove "קרפור מרקט" etc if needed, or just search)
+      // The branches object keys are IDs, values are names like "002 - קרפור מרקט אשקלון חאן"
+      
+      let foundBranchId = null;
+      
+      // Simple heuristic: search for significant part of the name in the branch list
+      // e.g. "נווה זאב"
+      const nameParts = storeName.replace(/[()]/g, '').split(' ').filter(p => p.length > 2 && p !== 'קרפור' && p !== 'מרקט' && p !== 'סיטי' && p !== 'היפר');
+      
+      if (nameParts.length > 0) {
+        for (const [id, name] of Object.entries(branches)) {
+           if (nameParts.every(part => name.includes(part))) {
+               foundBranchId = id;
+               break;
+           }
+        }
+      }
+
+      if (foundBranchId) {
+          this.emitStatus(`Identified branch ID ${foundBranchId} for "${storeName}"`);
+          branchId = foundBranchId;
+      } else {
+          this.emitStatus(`Could not automatically identify branch for "${storeName}". Defaulting to ${branchId} (Neve Zeev).`);
+      }
+
+      this.log(`Targeting branch ID: ${branchId}`);
+
+      // Filter and sort files for the target branch
+      const branchFiles = files.map(f => {
+          // Filename format example: Price7290055700007-2960-202601292300.gz
+          // Format seems to be: [Type][ProviderID]-[BranchID]-[Timestamp].gz
+          // Or sometimes 5 parts? verify regex.
+          // Based on debug HTML: Price7290055700007-2960-202601292300.gz
+          // Type: Price, Provider: 7290055700007, Branch: 2960, TS: 202601292300
+          
+          const match = f.name.match(/^(PriceFull|Price|PromoFull|Promo)\d+-(\d+)-(\d+)\.gz$/);
+          if (match) {
+              return {
+                  url: `https://prices.carrefour.co.il/${match.input.split('-')[2].substring(0, 8)}/${f.name}`, // Construct URL: domain/date/filename
+                  // Wait, the path in script was '20260129'. We should probably grab 'path' variable too or infer it.
+                  // Let's assume the date part of timestamp is the path.
+                  // Timestamp: YYYYMMDDHHMM -> 202601292300 -> date 20260129
+                  
+                  name: f.name,
+                  type: match[1] === 'Price' ? 'PRICE' : match[1] === 'PriceFull' ? 'PRICE_FULL' : match[1] === 'Promo' ? 'PROMO' : 'PROMO_FULL',
+                  branchId: match[2],
+                  timestamp: match[3],
+                  branchName: branches[match[2]] || 'Unknown'
+              };
+          }
+          return null;
+      }).filter(f => f && f.branchId === branchId);
+
+      // Verify URL construction. In HTML: 
+      // path = '20260129';
+      // href="https://prices.carrefour.co.il/20260129/Price..."
+      // So yes, it is https://prices.carrefour.co.il/<DATE_PART>/<FILENAME>
+      
+      branchFiles.forEach(f => {
+         const datePart = f.timestamp.substring(0, 8);
+         f.url = `https://prices.carrefour.co.il/${datePart}/${f.name}`;
+      });
+
+      const latestPriceFull = branchFiles
         .filter(l => l.type === 'PRICE_FULL')
         .sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
       
-      const latestPromoFull = pageFileLinks
+      const latestPromoFull = branchFiles
         .filter(l => l.type === 'PROMO_FULL')
         .sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
 
       const filesToProcess = [latestPriceFull, latestPromoFull].filter(f => f);
 
-      this.log(`Found ${filesToProcess.length} target files for store 5304`);
+      this.log(`Found ${filesToProcess.length} target files for store ${branchId}`);
       
       for (const fileLink of filesToProcess) {
         this.emitStatus(`Downloading ${fileLink.type} for ${fileLink.branchName}`);

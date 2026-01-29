@@ -582,15 +582,12 @@ app.delete('/api/shopping-list/match', async (req, res) => {
 });
 
 const { scrapeStore } = require('./scraper');
+const { scrapeAllStores } = require('./utils/scrapeScheduler');
 
 app.post('/api/scrape', async (req, res) => {
   const supermarkets = await db.all('SELECT * FROM supermarkets WHERE is_active = 1');
   const shoppingList = await db.all(`SELECT sl.quantity, i.name as itemName, i.id as itemId FROM shopping_list sl JOIN items i ON sl.item_id = i.id`);
-  (async () => {
-    for (const s of supermarkets) {
-      try { await scrapeStore(s, shoppingList, io, saveDiscoveryResults); } catch (err) { console.error(`Scraper background error for ${s.name}:`, err); }
-    }
-  })();
+  scrapeAllStores(supermarkets, shoppingList, io, saveDiscoveryResults);
   res.json({ message: 'Comparison started' });
 });
 

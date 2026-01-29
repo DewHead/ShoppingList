@@ -37,3 +37,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] **Track: Fix and Separate Scrapers**
 
 *Link: [./tracks/fix_scrapers_20260129/](./tracks/fix_scrapers_20260129/)*
+
+---
+
+- [~] **Track: Simultaneous Store Refresh**
+*Link: [./tracks/simultaneous_refresh_20260129/](./tracks/simultaneous_refresh_20260129/)*
