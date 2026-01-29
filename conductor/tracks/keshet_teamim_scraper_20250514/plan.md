@@ -17,9 +17,9 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md) (283e6fb)
 
 ## Phase 3: System Integration and Verification
-- [ ] Task: Register the new scraper in the scraper factory/manager.
-    - [ ] Ensure `server/scraper.js` (or the relevant registry) includes Keshet Teamim.
-- [ ] Task: Verify end-to-end refresh flow.
-    - [ ] Trigger a manual refresh for Keshet Teamim from the UI/API.
-    - [ ] Confirm data appears in the `prices` and `promos` threw tables.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
+- [x] Task: Register the new scraper in the scraper factory/manager. (dd27892)
+    - [x] Ensure `server/scraper.js` (or the relevant registry) includes Keshet Teamim.
+- [x] Task: Verify end-to-end refresh flow. (dd27892)
+    - [x] Trigger a manual refresh for Keshet Teamim from the UI/API.
+    - [x] Confirm data appears in the `prices` and `promos` threw tables.
+- [x] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md) (dd27892)
