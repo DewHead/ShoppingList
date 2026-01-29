@@ -32,9 +32,9 @@
 - [x] Task: Conductor - User Manual Verification 'The "Market" Family' (Protocol in workflow.md) [checkpoint: 266ad77]
 
 ## Phase 4: Fixing Shufersal
-- [ ] Task: Fix `shufersal.js`.
-    - [ ] Update `tests/shufersal_class.test.js` to reflect current site behavior (expect failure first).
-    - [ ] Update selectors/logic in `shufersal.js` to make tests pass.
+- [x] Task: Fix `shufersal.js`. 25caa28
+    - [x] Update `tests/shufersal_class.test.js` to reflect current site behavior (expect failure first).
+    - [x] Update selectors/logic in `shufersal.js` to make tests pass.
 - [ ] Task: Conductor - User Manual Verification 'Fixing Shufersal' (Protocol in workflow.md)
 
 ## Phase 5: Carrefour Implementation
