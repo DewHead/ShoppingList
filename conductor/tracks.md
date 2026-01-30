@@ -52,3 +52,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [ ] **Track: refactor search capabilities to have a robust and smart search for products in the hebrew language so that search terms provide the best relevant results.**
 *Link: [./tracks/hebrew_smart_search_20260130/](./tracks/hebrew_smart_search_20260130/)*
+
+---
+
+- [x] **Track: Replace Tayo with Tiv Taam**
+*Link: [./tracks/tiv_taam_scraper_20260130/](./tracks/tiv_taam_scraper_20260130/)*
