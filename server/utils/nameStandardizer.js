@@ -18,61 +18,14 @@ const MARKETING_FLUFF = [
 ];
 
 const BRANDS = [
-    'תנובה',
-    'שטראוס',
-    'טרה',
-    'אסם',
-    'עלית',
-    'סוגת',
-    'סנו',
-    'נסטלה',
-    'קוקה קולה',
-    'פריגת',
-    'יפאורה',
-    'זוגלובק',
-    'מעדני יחיעם',
-    'טירת צבי',
-    'גד',
-    'יוטבתה',
-    'מחלבות גד',
-    'וילי פוד',
-    'דיפלומט',
-    'ליימן שליסל',
-    'יוניליוור',
-    'פרוקטר אנד גמבל',
-    'שסטוביץ',
-    'תלמה',
-    'קנור',
-    'הלמנס',
-    'מזולה',
-    'בייגל בייגל',
-    'קליק',
-    'שוקולד פרה',
-    'פסק זמן',
-    'כיף כף',
-    'טורטית',
-    'טוויסט',
-    'פנטה',
-    'ספרייט',
-    'קינלי',
-    'נסקפה',
-    'טייסטרס צויס',
-    'יד מרדכי',
-    'אחווה',
-    'מאפיית אנגל',
-    'מאפיית ברמן',
-    'דנור',
-    'מיה',
-    'הנמל',
-    'תבואות',
-    'הרדוף',
-    'שופרסל',
-    'יוחננוף',
-    'ויקטורי',
-    'רמי לוי',
-    'קארפור',
-    'מחסני השוק',
-    'טיב טעם'
+    'תנובה', 'שטראוס', 'טרה', 'אסם', 'עלית', 'סוגת', 'סנו', 'נסטלה', 'קוקה קולה', 
+    'פריגת', 'יפאורה', 'זוגלובק', 'מעדני יחיעם', 'טירת צבי', 'גד', 'יוטבתה', 
+    'מחלבות גד', 'וילי פוד', 'דיפלומט', 'ליימן שליסל', 'יוניליוור', 'פרוקטר אנד גמבל', 
+    'שסטוביץ', 'תלמה', 'קנור', 'הלמנס', 'מזולה', 'בייגל בייגל', 'קליק', 
+    'שוקולד פרה', 'פסק זמן', 'כיף כף', 'טורטית', 'טוויסט', 'פנטה', 'ספרייט', 
+    'קינלי', 'נסקפה', 'טייסטרס צויס', 'יד מרדכי', 'אחווה', 'מאפיית אנגל', 
+    'מאפיית ברמן', 'דנור', 'מיה', 'הנמל', 'תבואות', 'הרדוף', 'שופרסל', 
+    'יוחננוף', 'ויקטורי', 'רמי לוי', 'קארפור', 'מחסני השוק', 'טיב טעם'
 ];
 
 /**
@@ -81,9 +34,8 @@ const BRANDS = [
 function normalizeUnits(name) {
     let normalized = name;
     for (const [key, value] of Object.entries(UNIT_MAPPINGS)) {
-        const regex = new RegExp(`(^|[^א-ת])${key}([^א-ת]|$)`, 'g');
-        normalized = normalized.replace(regex, `$1${value}$2`);
-        normalized = normalized.replace(regex, `$1${value}$2`);
+        const regex = new RegExp(`(^|[^א-ת])${key}(?![א-ת])`, 'g');
+        normalized = normalized.replace(regex, `$1${value}`);
     }
     return normalized;
 }
@@ -106,15 +58,13 @@ function extractBrand(name) {
     let foundBrand = '';
     let remainingName = name;
 
-    // Sort brands by length descending to match longest possible brand name first (e.g., "מחלבות גד" before "גד")
     const sortedBrands = [...BRANDS].sort((a, b) => b.length - a.length);
 
     for (const brand of sortedBrands) {
-        // Look for brand as a whole word (using non-Hebrew boundaries)
-        const regex = new RegExp(`(^|[^א-ת])${brand}([^א-ת]|$)`, 'g');
+        const regex = new RegExp(`(^|[^א-ת'"])${brand}(?![א-ת])`, 'g');
         if (regex.test(remainingName)) {
             foundBrand = brand;
-            remainingName = remainingName.replace(regex, '$1$2').replace(/\s\s+/g, ' ').trim();
+            remainingName = remainingName.replace(regex, '$1').replace(/\s\s+/g, ' ').trim();
             break; 
         }
     }
@@ -123,29 +73,100 @@ function extractBrand(name) {
 }
 
 /**
+ * Advanced deduplication and filtering for leaked metadata.
+ */
+function finalizeClean(name) {
+    const units = Object.values(UNIT_MAPPINGS);
+    
+    // 1. Initial metadata cleanup
+    let temp = name.replace(/\d+\.\d+\s+100\s*ג['"]/g, '');
+    temp = temp.replace(/100\s*ג['"]/g, '');
+
+    // 2. Word-based processing
+    const words = temp.split(/\s+/);
+    const uniqueWords = [];
+    const seen = new Set();
+    const satisfiedUnits = new Set();
+
+    // Pass 1: Find priority unit indices (number + unit pairs)
+    const unitIndices = {}; // unit -> index
+    for (let i = 0; i < words.length; i++) {
+        if (units.includes(words[i+1]) && /^\d+(\.\d+)?$/.test(words[i])) {
+            if (unitIndices[words[i+1]] === undefined) {
+                unitIndices[words[i+1]] = i; 
+            }
+        }
+    }
+
+    // Pass 2: Reconstruct
+    for (let i = 0; i < words.length; i++) {
+        let word = words[i];
+        if (!word) continue;
+
+        let normalized = word;
+        if (/^\d+(\.\d+)?$/.test(word)) {
+            normalized = parseFloat(word).toString();
+        }
+
+        const nextWord = words[i+1];
+        const isFollowedByUnit = nextWord && units.includes(nextWord);
+
+        // Handle number + unit pair
+        if (isFollowedByUnit) {
+            // Check if this is the priority one
+            if (unitIndices[nextWord] === i) {
+                if (!seen.has(normalized)) {
+                    uniqueWords.push(normalized);
+                    seen.add(normalized);
+                }
+                uniqueWords.push(nextWord);
+                satisfiedUnits.add(nextWord);
+                seen.add(nextWord);
+                i++; // Skip unit word
+                continue;
+            }
+            // If NOT priority, proceed to normal word processing for THIS word (number)
+            // The nextWord (unit) will be processed in the next iteration
+        }
+
+        // Handle standalone unit
+        if (units.includes(word)) {
+            if (!satisfiedUnits.has(word) && unitIndices[word] === undefined) {
+                uniqueWords.push(word);
+                satisfiedUnits.add(word);
+                seen.add(word);
+            }
+            continue;
+        }
+
+        // Deduplicate words/numbers
+        if (!seen.has(normalized)) {
+            uniqueWords.push(normalized);
+            seen.add(normalized);
+        }
+    }
+
+    let result = uniqueWords.join(' ').trim();
+    result = result.replace(/(\d+%)(.*)\d+%/g, '$1$2').trim();
+
+    return result.replace(/\s\s+/g, ' ').trim();
+}
+
+/**
  * Main entry point for name standardization.
- * Format: [Product Description] [Weight/Volume] [Brand]
  */
 function standardizeName(name) {
     if (!name) return '';
     
-    // 1. Initial cleaning
     let cleaned = stripMarketingFluff(name);
-    
-    // 2. Normalize units first so weight is in standard format
     cleaned = normalizeUnits(cleaned);
     
-    // 3. Extract brand
     const { foundBrand, remainingName } = extractBrand(cleaned);
     
-    // 4. Reconstruct: [Description + Weight] [Brand]
-    // Since weight is usually already at the end of the description in most store names,
-    // and extractBrand removes the brand from wherever it was,
-    // appending foundBrand to the end usually satisfies the requirement.
+    let result = finalizeClean(remainingName);
     
-    let result = remainingName;
     if (foundBrand) {
-        result = `${remainingName} ${foundBrand}`;
+        result = `${result} ${foundBrand}`;
     }
     
     return result.replace(/\s\s+/g, ' ').trim();
