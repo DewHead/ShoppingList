@@ -137,16 +137,21 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
                         <CircularProgress size={16} sx={{ my: 0.5 }} />
                       </Tooltip>
                     ) : totalData?.isValid ? (
-                      <Typography 
-                        variant="subtitle2" 
-                        sx={{ 
-                          fontWeight: isCheapest ? 800 : 600,
-                          color: isCheapest ? 'success.main' : 'text.primary',
-                          fontSize: isCheapest ? '1rem' : '0.875rem'
-                        }}
-                      >
-                        ₪{totalData.total}
-                      </Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <Typography 
+                          variant="subtitle2" 
+                          sx={{ 
+                            fontWeight: isCheapest ? 900 : 600,
+                            fontSize: isCheapest ? '1.1rem' : '0.875rem',
+                            bgcolor: isCheapest ? 'success.light' : 'transparent',
+                            px: isCheapest ? 1 : 0,
+                            borderRadius: 1,
+                            color: isCheapest ? 'success.contrastText' : 'text.primary',
+                          }}
+                        >
+                          ₪{totalData.total}
+                        </Typography>
+                      </Box>
                     ) : statusInfo?.isError ? (
                       <Tooltip title={statusInfo.status}>
                         <ErrorOutlineIcon color="error" sx={{ fontSize: 18, mt: 0.5 }} />
