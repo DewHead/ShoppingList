@@ -2,9 +2,9 @@ const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 const path = require('path');
 
-async function initDb() {
+async function initDb(filename = 'database.sqlite') {
   const db = await open({
-    filename: path.join(__dirname, 'database.sqlite'),
+    filename: path.join(__dirname, filename),
     driver: sqlite3.Database
   });
 
@@ -108,6 +108,17 @@ async function initDb() {
     if (!slInfo.some(c => c.name === 'is_done')) {
         await db.exec('ALTER TABLE shopping_list ADD COLUMN is_done BOOLEAN DEFAULT 0');
     }
+
+    // Remove Tayo if it exists (Replacement with Tiv Taam)
+    const tayo = await db.get('SELECT id FROM supermarkets WHERE name LIKE ?', ['%טאיו%']);
+    if (tayo) {
+        console.log('Removing Tayo (replaced by Tiv Taam)...');
+        await db.run('DELETE FROM supermarket_items WHERE supermarket_id = ?', [tayo.id]);
+        await db.run('DELETE FROM supermarket_promos WHERE supermarket_id = ?', [tayo.id]);
+        await db.run('DELETE FROM item_matches WHERE supermarket_id = ?', [tayo.id]);
+        await db.run('DELETE FROM items_fts WHERE supermarket_id = ?', [tayo.id]);
+        await db.run('DELETE FROM supermarkets WHERE id = ?', [tayo.id]);
+    }
   } catch (err) { console.error('Migration error:', err.message); }
 
   // Seed default supermarkets if empty
@@ -120,7 +131,7 @@ async function initDb() {
       { name: 'ויקטורי (שדרות דויד בן גוריון)', url: 'https://www.victoryonline.co.il/' },
       { name: 'קרפור מרקט (נווה זאב)', url: 'https://www.carrefour.co.il/' },
       { name: 'קשת טעמים (ישפרו פלאנט)', url: 'https://url.publishedprices.co.il/login' },
-      { name: 'טאיו (חיים יחיל)', url: 'https://tayo.co.il/' },
+      { name: 'טיב טעם', url: 'https://url.publishedprices.co.il/login' },
       { name: 'מחסני השוק (כללי)', url: 'https://www.mahsaneyshak.co.il/online' } 
     ];
 
