@@ -57,3 +57,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Replace Tayo with Tiv Taam**
 *Link: [./tracks/tiv_taam_scraper_20260130/](./tracks/tiv_taam_scraper_20260130/)*
+
+---
+
+- [x] **Track: since each store has different formatting for their product names, i want to standardize the product names format accros all stores.**
+*Link: [./tracks/product_name_standardization_20260130/](./tracks/product_name_standardization_20260130/)*
