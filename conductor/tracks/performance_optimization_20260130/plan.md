@@ -1,11 +1,8 @@
 # Plan: Performance Optimization 20260130
 
 ## Phase 1: Infrastructure & Asset Optimization
-- [~] Task: Audit and Optimize Background Images
-    - [ ] Identify all large image assets in `client/public` and `Backgrounds/`.
-    - [ ] Compress/convert to WebP where appropriate using a CLI tool or script.
-    - [ ] Update components to reference optimized versions.
-- [x] Task: Implement Route-based Code Splitting b1a2c3d
+- [x] Task: Audit and Optimize Background Images a3076cb
+- [x] Task: Implement Route-based Code Splitting a3076cb
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Infrastructure & Asset Optimization' (Protocol in workflow.md)
 
 ## Phase 2: Frontend List Performance
