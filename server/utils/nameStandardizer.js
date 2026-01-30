@@ -169,7 +169,8 @@ function standardizeName(name) {
         result = `${result} ${foundBrand}`;
     }
     
-    return result.replace(/\s\s+/g, ' ').trim();
+    // Add RTL mark (\u200F) to ensure trailing punctuation (like ') stays on the correct side in RTL layouts
+    return (result.replace(/\s\s+/g, ' ').trim() + '\u200F');
 }
 
 module.exports = {
