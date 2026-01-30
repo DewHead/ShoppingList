@@ -14,11 +14,8 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Frontend List Performance' (Protocol in workflow.md)
 
 ## Phase 3: Backend & Scraper Efficiency
-- [~] Task: Implement Scraper Cache (TTL)
-    - [ ] Write failing tests for `server/scraper.js` or a new cache utility to verify TTL logic (e.g., skip scrape if data is < 1 hour old).
-    - [ ] Implement a simple memory-based or SQLite-backed cache for scraped results.
-    - [ ] Update the scraper dispatch logic to check the cache before launching a browser instance.
-- [ ] Task: Optimize Worker Pool Concurrency
+- [x] Task: Implement Scraper Cache (TTL) 44028d1
+- [~] Task: Optimize Worker Pool Concurrency
     - [ ] Write tests to simulate high-load scraping and verify the worker pool respects limits.
     - [ ] Refactor the scraping queue in `server/index.js` or `server/scraper.js` for better resource utilization.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Backend & Scraper Efficiency' (Protocol in workflow.md)

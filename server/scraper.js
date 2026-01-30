@@ -11,7 +11,19 @@ const TivTaamScraper = require('./scrapers/tivTaam');
 
 chromium.use(stealth);
 
+const SCRAPE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
+
 async function scrapeStore(supermarket, items, io, onResults) {
+  // Cache check
+  if (supermarket.last_scrape_time) {
+    const lastScrape = new Date(supermarket.last_scrape_time).getTime();
+    if (Date.now() - lastScrape < SCRAPE_TTL) {
+      console.log(`[Cache] Skipping scrape for ${supermarket.name} (last scrape was ${Math.round((Date.now() - lastScrape) / 60000)} mins ago)`);
+      io.emit('storeStatus', { storeId: supermarket.id, status: 'Done (Skipping - Recently updated)' });
+      return;
+    }
+  }
+
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
