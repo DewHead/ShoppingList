@@ -52,6 +52,8 @@ function scrapeStore(supermarket, items, io, onResults) {
 }
 
 async function performScrape(supermarket, items, io, onResults) {
+  console.log(`[Worker] Starting scrape for ${supermarket.name}...`);
+  io.emit('storeStatus', { storeId: supermarket.id, status: 'Launching browser...' });
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -85,8 +87,13 @@ async function performScrape(supermarket, items, io, onResults) {
     }
 
     if (scraper) {
+      io.emit('storeStatus', { storeId: supermarket.id, status: 'Initializing scraper...' });
       const { products, promos } = await scraper.scrape(page);
       
+      io.emit('storeStatus', { storeId: supermarket.id, status: 'Scraper started...' });
+      const { products, promos } = await scraper.scrape(page);
+      
+      io.emit('storeStatus', { storeId: supermarket.id, status: 'Saving results to database...' });
       if (onResults) {
         await onResults(supermarket.id, products, promos);
       }

@@ -1,4 +1,4 @@
-const xml2js = require('xml2js');
+const { SaxesParser } = require('saxes');
 const zlib = require('zlib');
 const BaseScraper = require('./BaseScraper');
 const { randomDelay, axiosGetWithRetry, fixSpacing, formatPromo } = require('../utils/scraperUtils');
@@ -6,6 +6,65 @@ const { randomDelay, axiosGetWithRetry, fixSpacing, formatPromo } = require('../
 class ShufersalScraper extends BaseScraper {
   constructor(supermarket, io) {
     super(supermarket, io);
+  }
+
+  async parseXmlStreaming(buffer, type, fileLinkName, allDiscoveredProducts, _allDiscoveredPromos) {
+    return new Promise((resolve, reject) => {
+      const parser = new SaxesParser();
+      let currentTag = null;
+      let currentItem = {};
+      let inItem = false;
+      let textContent = '';
+
+      parser.on('opentag', (node) => {
+        currentTag = node.name;
+        if (node.name === 'Item' || node.name === 'Promotion') {
+          inItem = true;
+          currentItem = {};
+        }
+        textContent = '';
+      });
+
+      parser.on('text', (text) => {
+        textContent += text;
+      });
+
+      parser.on('closetag', (node) => {
+        if (node.name === 'Item' || node.name === 'Promotion') {
+          inItem = false;
+          if (type === 'PRICE_FULL') {
+            allDiscoveredProducts.push({
+              supermarket_id: this.supermarket.id,
+              item_id: null,
+              remote_id: currentItem.ItemCode,
+              remote_name: fixSpacing(currentItem.ItemName),
+              branch_info: fileLinkName,
+              price: parseFloat(currentItem.ItemPrice),
+              unit_of_measure: currentItem.UnitOfMeasure || null,
+              unit_of_measure_price: parseFloat(currentItem.UnitOfMeasurePrice) || null,
+              manufacturer: currentItem.ManufacturerName || null,
+              country: currentItem.ManufactureCountry || null,
+              last_updated: new Date().toISOString(),
+            });
+            if (allDiscoveredProducts.length % 500 === 0) {
+                this.emitStatus(`Processed ${allDiscoveredProducts.length} items...`);
+            }
+          }
+        } else if (inItem) {
+          currentItem[node.name] = textContent.trim();
+        }
+      });
+
+      parser.on('end', () => resolve());
+      parser.on('error', (err) => reject(err));
+
+      try {
+        const decompressed = zlib.gunzipSync(buffer);
+        parser.write(decompressed.toString('utf8')).close();
+      } catch (err) {
+        reject(err);
+      }
+    });
   }
 
   async scrape(page) {
@@ -67,86 +126,51 @@ class ShufersalScraper extends BaseScraper {
         this.emitStatus(`Downloading ${fileLink.type} for ${fileLink.branchName}`);
         try {
           const response = await axiosGetWithRetry(fileLink.url);
-          const decompressed = zlib.gunzipSync(response.data);
-          const xml = decompressed.toString('utf8');
-
-          const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
-          const result = await parser.parseStringPromise(xml);
-          const root = result.root || result.Root;
           
           if (fileLink.type === 'PRICE_FULL') {
-              const products = root && root.Items ? root.Items.Item : []; 
-              const productArray = Array.isArray(products) ? products : [products].filter(p => p);
-
-              this.emitStatus(`Processing ${productArray.length} items in chunks...`);
-              
-              const CHUNK_SIZE = 500;
-              for (let i = 0; i < productArray.length; i += CHUNK_SIZE) {
-                const chunk = productArray.slice(i, i + CHUNK_SIZE);
-                for (const product of chunk) {
-                  allDiscoveredProducts.push({
-                    supermarket_id: this.supermarket.id,
-                    item_id: null,
-                    remote_id: product.ItemCode,
-                    remote_name: fixSpacing(product.ItemName),
-                    branch_info: fileLink.branchName,
-                    price: parseFloat(product.ItemPrice),
-                    unit_of_measure: product.UnitOfMeasure || null,
-                    unit_of_measure_price: parseFloat(product.UnitOfMeasurePrice) || null,
-                    manufacturer: product.ManufacturerName || null,
-                    country: product.ManufactureCountry || null,
-                    last_updated: new Date().toISOString(),
-                  });
-                }
-                // Yield to event loop
-                await new Promise(resolve => setImmediate(resolve));
-                if (i % 2000 === 0) this.emitStatus(`Processed ${i} / ${productArray.length} items...`);
-              }
-              this.emitStatus(`Finished processing ${productArray.length} items`);
+              await this.parseXmlStreaming(response.data, 'PRICE_FULL', fileLink.branchName, allDiscoveredProducts, allDiscoveredPromos);
           } else if (fileLink.type === 'PROMO_FULL') {
+              const decompressed = zlib.gunzipSync(response.data);
+              const xml = decompressed.toString('utf8');
+              const xml2js = require('xml2js');
+              const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
+              const result = await parser.parseStringPromise(xml);
+              const root = result.root || result.Root;
               const promos = root && root.Promotions ? root.Promotions.Promotion : [];
               const promoArray = Array.isArray(promos) ? promos : [promos].filter(p => p);
 
-              this.emitStatus(`Processing ${promoArray.length} promos in chunks...`);
-
-              const CHUNK_SIZE = 200;
-              for (let i = 0; i < promoArray.length; i += CHUNK_SIZE) {
-                  const chunk = promoArray.slice(i, i + CHUNK_SIZE);
-                  for (const promo of chunk) {
-                      try {
-                          let promoItems = [];
-                          if (promo.PromotionItems && promo.PromotionItems.Item) {
-                              promoItems = Array.isArray(promo.PromotionItems.Item) ? promo.PromotionItems.Item : [promo.PromotionItems.Item];
+              for (const promo of promoArray) {
+                  try {
+                      let promoItems = [];
+                      if (promo.PromotionItems && promo.PromotionItems.Item) {
+                          promoItems = Array.isArray(promo.PromotionItems.Item) ? promo.PromotionItems.Item : [promo.PromotionItems.Item];
+                      }
+                      
+                      if (promoItems.length > 0) {
+                          for (const pi of promoItems) {
+                            if (pi && pi.ItemCode) {
+                                allDiscoveredPromos.push({
+                                    supermarket_id: this.supermarket.id,
+                                    branch_info: fileLink.branchName,
+                                    remote_id: pi.ItemCode,
+                                    promo_id: promo.PromotionId,
+                                    description: formatPromo(promo.PromotionDescription),
+                                    last_updated: new Date().toISOString()
+                                });
+                            }
                           }
-                          
-                          if (promoItems.length > 0) {
-                              for (const pi of promoItems) {
-                                if (pi && pi.ItemCode) {
-                                    allDiscoveredPromos.push({
-                                        supermarket_id: this.supermarket.id,
-                                        branch_info: fileLink.branchName,
-                                        remote_id: pi.ItemCode,
-                                        promo_id: promo.PromotionId,
-                                        description: formatPromo(promo.PromotionDescription),
-                                        last_updated: new Date().toISOString()
-                                    });
-                                }
-                              }
-                          } else if (promo.ItemCode) {
-                            allDiscoveredPromos.push({
-                                supermarket_id: this.supermarket.id,
-                                branch_info: fileLink.branchName,
-                                remote_id: promo.ItemCode,
-                                promo_id: promo.PromotionId,
-                                description: formatPromo(promo.PromotionDescription),
-                                last_updated: new Date().toISOString()
-                            });
-                          }
-                      } catch (e) {}
-                  }
-                  await new Promise(resolve => setImmediate(resolve));
+                      } else if (promo.ItemCode) {
+                        allDiscoveredPromos.push({
+                            supermarket_id: this.supermarket.id,
+                            branch_info: fileLink.branchName,
+                            remote_id: promo.ItemCode,
+                            promo_id: promo.PromotionId,
+                            description: formatPromo(promo.PromotionDescription),
+                            last_updated: new Date().toISOString()
+                        });
+                      }
+                  } catch (e) {}
               }
-              this.emitStatus(`Processed ${promoArray.length} promos`);
           }
         } catch (fileError) {
           this.error(`Error processing file ${fileLink.url}:`, fileError.message);
