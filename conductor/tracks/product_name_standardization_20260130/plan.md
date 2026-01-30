@@ -11,14 +11,14 @@ Focus on building the utility functions that handle string cleaning and unit con
 - [x] Task: Implement `stripMarketingFluff` function to remove terms like "במבצע", "חדש", etc. bacb44f
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Core Logic' (Protocol in workflow.md) 38eca5b
 
-## Phase 2: Brand Extraction & Structural Reordering
+## Phase 2: Brand Extraction & Structural Reordering [checkpoint: 7b71973]
 Implement the brand identification logic and the final string assembly.
 
-- [ ] Task: Define a comprehensive list of common Israeli grocery brands in a configuration file or constant.
-- [ ] Task: Write tests for `standardizeName` covering the `[Description] [Weight] [Brand]` requirement.
-- [ ] Task: Implement `extractBrand` using keyword-based matching.
-- [ ] Task: Implement the main `standardizeName` function that coordinates extraction, cleaning, and reordering.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Brand & Structure' (Protocol in workflow.md)
+- [x] Task: Define a comprehensive list of common Israeli grocery brands in a configuration file or constant. 7c3d31d
+- [x] Task: Write tests for `standardizeName` covering the `[Description] [Weight] [Brand]` requirement. 7c3d31d
+- [x] Task: Implement `extractBrand` using keyword-based matching. 7c3d31d
+- [x] Task: Implement the main `standardizeName` function that coordinates extraction, cleaning, and reordering. 7c3d31d
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Brand & Structure' (Protocol in workflow.md) 7b71973
 
 ## Phase 3: API Integration
 Integrate the standardizer into the backend routes.
