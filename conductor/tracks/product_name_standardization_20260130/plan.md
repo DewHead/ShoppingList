@@ -1,0 +1,29 @@
+# Implementation Plan: Product Name Standardization
+
+This plan outlines the steps to implement a standardization engine at the API layer to normalize product names across all stores into the format: `[Product Description] [Weight/Volume] [Brand]`.
+
+## Phase 1: Core Logic & Unit Normalization
+Focus on building the utility functions that handle string cleaning and unit conversion.
+
+- [x] Task: Create `server/utils/nameStandardizer.js` with basic unit mapping and noise removal regex. bacb44f
+- [x] Task: Write unit tests in `server/tests/nameStandardizer.test.js` for unit normalization (e.g., "גרם" to "ג'"). bacb44f
+- [x] Task: Implement `normalizeUnits` function to pass tests. bacb44f
+- [x] Task: Implement `stripMarketingFluff` function to remove terms like "במבצע", "חדש", etc. bacb44f
+- [ ] Task: Conductor - User Manual Verification 'Phase 1: Core Logic' (Protocol in workflow.md)
+
+## Phase 2: Brand Extraction & Structural Reordering
+Implement the brand identification logic and the final string assembly.
+
+- [ ] Task: Define a comprehensive list of common Israeli grocery brands in a configuration file or constant.
+- [ ] Task: Write tests for `standardizeName` covering the `[Description] [Weight] [Brand]` requirement.
+- [ ] Task: Implement `extractBrand` using keyword-based matching.
+- [ ] Task: Implement the main `standardizeName` function that coordinates extraction, cleaning, and reordering.
+- [ ] Task: Conductor - User Manual Verification 'Phase 2: Brand & Structure' (Protocol in workflow.md)
+
+## Phase 3: API Integration
+Integrate the standardizer into the backend routes.
+
+- [ ] Task: Identify all API endpoints returning product data (e.g., comparison results, search results).
+- [ ] Task: Apply `standardizeName` to the product objects before sending the JSON response.
+- [ ] Task: Verify that frontend components (ComparisonTable, ShoppingListPage) display the standardized names correctly.
+- [ ] Task: Conductor - User Manual Verification 'Phase 3: API Integration' (Protocol in workflow.md)
