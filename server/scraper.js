@@ -7,6 +7,7 @@ const YohananofScraper = require('./scrapers/yohananof');
 const KeshetTeamimScraper = require('./scrapers/keshetTeamim');
 const VictoryScraper = require('./scrapers/victory');
 const CarrefourScraper = require('./scrapers/carrefour');
+const TivTaamScraper = require('./scrapers/tivTaam');
 
 chromium.use(stealth);
 
@@ -39,6 +40,8 @@ async function scrapeStore(supermarket, items, io, onResults) {
       scraper = new MahsaneyHashukScraper(supermarket, io);
     } else if (url.includes('carrefour')) {
       scraper = new CarrefourScraper(supermarket, io);
+    } else if (name.includes('טיב טעם')) {
+      scraper = new TivTaamScraper(supermarket, io);
     }
 
     if (scraper) {
