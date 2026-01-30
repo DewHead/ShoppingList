@@ -30,8 +30,8 @@ class VictoryScraper extends BaseScraper {
       await randomDelay(2000, 3000);
 
       // 3. Branch
-      // Use branch ID or name from database if available, else default
-      await this.marketBase.selectOption(page, 'branch', 'אינטרנט'); 
+      const targetBranch = this.supermarket.branch_remote_id || '97';
+      await this.marketBase.selectOption(page, 'branch', targetBranch); 
       await randomDelay(2000, 3000);
 
       // 4. Type
@@ -65,11 +65,12 @@ class VictoryScraper extends BaseScraper {
 
       const cookies = await page.context().cookies();
       const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+      const branchInfo = `Victory ${targetBranch}`;
 
       for (const file of filesToProcess) {
           this.emitStatus(`Downloading ${file.type}...`);
           try {
-              const results = await this.marketBase.processFile(file.url, file.type, cookieHeader, 'ויקטורי אינטרנט');
+              const results = await this.marketBase.processFile(file.url, file.type, cookieHeader, branchInfo);
               if (file.type.includes('PRICE')) {
                   allDiscoveredProducts.push(...results);
               } else {

@@ -34,7 +34,8 @@ class MahsaneyHashukScraper extends BaseScraper {
       }
 
       // 3. Branch
-      await this.marketBase.selectOption(page, 'branch', 'אינטרנט'); 
+      const targetBranch = this.supermarket.branch_remote_id || '97';
+      await this.marketBase.selectOption(page, 'branch', targetBranch); 
       await randomDelay(3000, 5000);
 
       // 4. Type
@@ -63,11 +64,12 @@ class MahsaneyHashukScraper extends BaseScraper {
 
       const cookies = await page.context().cookies();
       const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+      const branchInfo = `מחסני השוק ${targetBranch}`;
 
       for (const file of filesToProcess) {
           this.emitStatus(`Downloading ${file.type} (${file.name})...`);
           try {
-              const results = await this.marketBase.processFile(file.url, file.type, cookieHeader, 'מחסני השוק אינטרנט');
+              const results = await this.marketBase.processFile(file.url, file.type, cookieHeader, branchInfo);
               if (file.type.includes('PRICE')) {
                   allDiscoveredProducts.push(...results);
               } else {

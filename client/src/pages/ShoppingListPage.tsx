@@ -36,7 +36,7 @@ import { useTranslation } from '../useTranslation';
 import { API_BASE_URL } from '../config';
 import AddItemFAB from '../components/AddItemFAB';
 import ShoppingListSidePanel from '../components/ShoppingListSidePanel';
-import { calculateBestPrice, cleanStoreName } from '../utils/comparisonUtils';
+import { calculateBestPrice, cleanStoreName, getStoreLogo } from '../utils/comparisonUtils';
 import './ShoppingListPage.css';
 
 const socket = io(API_BASE_URL);
@@ -581,13 +581,26 @@ const ShoppingListPage = () => {
                     boxShadow: '0px -4px 10px rgba(0,0,0,0.05)'
                 }}
              >
-                <Box>
-                    <Typography variant="caption" sx={{ opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
-                        {cheapestStore ? t('cheapestStore') : t('matchesFor')}
-                    </Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
-                        {cheapestStore ? cleanStoreName(cheapestStore.name) : `${selectedItems.length} items`}
-                    </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {cheapestStore && getStoreLogo(cheapestStore.name) ? (
+                        <Box sx={{ width: 100, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Box 
+                                component="img" 
+                                src={getStoreLogo(cheapestStore.name)!} 
+                                alt={cheapestStore.name}
+                                sx={{ height: '100%', width: '100%', objectFit: 'contain' }}
+                            />
+                        </Box>
+                    ) : (
+                        <Box>
+                            <Typography variant="caption" sx={{ opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+                                {cheapestStore ? t('cheapestStore') : t('matchesFor')}
+                            </Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
+                                {cheapestStore ? cleanStoreName(cheapestStore.name) : `${selectedItems.length} items`}
+                            </Typography>
+                        </Box>
+                    )}
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                      {cheapestStore && <Typography variant="h5" sx={{ fontWeight: 800, color: 'primary.main' }}>₪{cheapestStore.total}</Typography>}

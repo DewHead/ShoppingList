@@ -47,16 +47,37 @@ const calculateBestPrice = (match, quantity) => {
       const parts = promoDesc.split(/\s+ב-?\s*₪?/);
       if (parts.length >= 2) {
           const lastPart = parts[parts.length - 1];
-          const priceMatch = lastPart.match(/^[\d.]+/);
+          // Strip any % or other non-price chars before parsing
+          const priceMatch = lastPart.replace(/%/g, '').match(/^[\d.]+/);
           
           if (priceMatch) {
               const promoPrice = parseFloat(priceMatch[0]);
               const namePart = parts.slice(0, -1).join(' ב ').trim();
-              const qtyMatch = namePart.match(/\s(\d+)$/);
               
-              if (qtyMatch && parseInt(qtyMatch[1]) > 1) {
-                  const requiredQty = parseInt(qtyMatch[1]);
-                  const cleanedName = namePart.replace(/\s+\d+$/, '').trim();
+              // Try to find quantity: either "Name Qty" or just "Qty" (strip % just in case)
+              const qtyMatch = namePart.replace(/%/g, '').match(/(\s|^)(\d+)$/);
+              
+              // Handle "השני ב..." (the second for...)
+              const isSecondAt = namePart.endsWith('השני') || namePart.endsWith('ה-2');
+
+              if (isSecondAt) {
+                  if (quantity >= 2) {
+                      const pairs = Math.floor(quantity / 2);
+                      const remaining = quantity % 2;
+                      const currentTotal = (pairs * (unitPrice + promoPrice)) + (remaining * unitPrice);
+                      
+                      if (currentTotal < bestResult.total) {
+                          bestResult = { 
+                              total: currentTotal, 
+                              isPromo: true, 
+                              originalTotal,
+                              displayName: namePart || bestResult.displayName 
+                          };
+                      }
+                  }
+              } else if (qtyMatch && parseInt(qtyMatch[2]) > 1) {
+                  const requiredQty = parseInt(qtyMatch[2]);
+                  const cleanedName = namePart.replace(/(\s|^)\d+$/, '').trim();
                   if (quantity >= requiredQty) {
                       const promoGroups = Math.floor(quantity / requiredQty);
                       const remaining = quantity % requiredQty;
@@ -72,6 +93,7 @@ const calculateBestPrice = (match, quantity) => {
                       }
                   }
               } else {
+                  // Only apply single-price promos if it's not a "second at" or "X for" type
                   const currentTotal = promoPrice * quantity;
                   if (currentTotal < bestResult.total) {
                       bestResult = { 
@@ -717,7 +739,11 @@ app.post('/api/scrape/:id', async (req, res) => {
     const supermarket = await db.get('SELECT * FROM supermarkets WHERE id = ?', [id]);
     if (!supermarket) return res.status(404).json({ error: 'Supermarket not found' });
     const shoppingList = await db.all(`SELECT sl.quantity, i.name as itemName, i.id as itemId FROM shopping_list sl JOIN items i ON sl.item_id = i.id`);
-    await scrapeStore(supermarket, shoppingList, io, saveDiscoveryResults);
+    
+    // Start scraping in background
+    scrapeStore(supermarket, shoppingList, io, saveDiscoveryResults)
+      .catch(err => console.error(`Background scrape error for ${supermarket.name}:`, err));
+
     res.json({ message: `Scrape for ${supermarket.name} started` });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

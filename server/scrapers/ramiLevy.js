@@ -22,17 +22,17 @@ class RamiLevyScraper extends BaseScraper {
       const fileLinks = await this.levyBase.getFileLinks(page);
       this.log(`Found ${fileLinks.length} .gz files in Rami Levy portal.`);
       
-      const targetStoreId = '001';
+      const targetStoreId = '039';
       const filesToProcess = this.levyBase.filterLatestFiles(fileLinks, targetStoreId);
       this.log(`Processing ${filesToProcess.length} latest Full files for Rami Levy.`);
 
       // 3. Process Files
       const branchInfo = this.supermarket.name; 
       for (const file of filesToProcess) {
-        const type = file.name.includes('Price') ? 'PRICE' : 'PROMO';
+        const type = file.name.toLowerCase().includes('price') ? 'PRICE' : 'PROMO';
         try {
           this.emitStatus(`Downloading ${type} file for ${branchInfo}`);
-          const results = await this.levyBase.processFile(file.url, type, cookieHeader, branchInfo);
+          const results = await this.levyBase.processFile(file.url, type, cookieHeader, branchInfo, page);
           
           if (type === 'PRICE') {
             allDiscoveredProducts.push(...results);

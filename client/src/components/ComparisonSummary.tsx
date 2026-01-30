@@ -2,7 +2,7 @@ import { Paper, Typography, Box, useTheme } from '@mui/material';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import StoreIcon from '@mui/icons-material/Store';
 import { useTranslation } from '../useTranslation';
-import { cleanStoreName } from '../utils/comparisonUtils';
+import { cleanStoreName, getStoreLogo } from '../utils/comparisonUtils';
 
 interface ComparisonSummaryProps {
   cheapestStore: {
@@ -37,16 +37,27 @@ export default function ComparisonSummary({ cheapestStore, maxTotal }: Compariso
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '50%' }}>
-          <StoreIcon fontSize="large" />
+        <Box sx={{ bgcolor: 'white', p: 1, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 80, height: 80 }}>
+          {getStoreLogo(cheapestStore.name) ? (
+            <Box 
+              component="img" 
+              src={getStoreLogo(cheapestStore.name)!} 
+              alt={cheapestStore.name}
+              sx={{ height: 60, width: '100%', objectFit: 'contain' }}
+            />
+          ) : (
+            <StoreIcon fontSize="large" color="success" />
+          )}
         </Box>
         <Box>
           <Typography variant="overline" sx={{ opacity: 0.9, fontWeight: 700, letterSpacing: 1 }}>
             {t('cheapestStore')}
           </Typography>
-          <Typography variant="h4" sx={{ fontWeight: 900 }}>
-            {cleanStoreName(cheapestStore.name)}
-          </Typography>
+          {!getStoreLogo(cheapestStore.name) && (
+            <Typography variant="h4" sx={{ fontWeight: 900 }}>
+                {cleanStoreName(cheapestStore.name)}
+            </Typography>
+          )}
         </Box>
       </Box>
 

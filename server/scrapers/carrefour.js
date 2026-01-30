@@ -35,34 +35,7 @@ class CarrefourScraper extends BaseScraper {
       this.log(`Extracted ${files.length} files and ${Object.keys(branches).length} branches from page data.`);
       
       // Determine target branch ID
-      let branchId = '3700'; // Default to Neve Zeev as per previous logs
-      // Try to find a matching branch based on supermarket name if possible
-      const storeName = this.supermarket.name || '';
-      // Clean up store name for matching (remove "קרפור מרקט" etc if needed, or just search)
-      // The branches object keys are IDs, values are names like "002 - קרפור מרקט אשקלון חאן"
-      
-      let foundBranchId = null;
-      
-      // Simple heuristic: search for significant part of the name in the branch list
-      // e.g. "נווה זאב"
-      const nameParts = storeName.replace(/[()]/g, '').split(' ').filter(p => p.length > 2 && p !== 'קרפור' && p !== 'מרקט' && p !== 'סיטי' && p !== 'היפר');
-      
-      if (nameParts.length > 0) {
-        for (const [id, name] of Object.entries(branches)) {
-           if (nameParts.every(part => name.includes(part))) {
-               foundBranchId = id;
-               break;
-           }
-        }
-      }
-
-      if (foundBranchId) {
-          this.emitStatus(`Identified branch ID ${foundBranchId} for "${storeName}"`);
-          branchId = foundBranchId;
-      } else {
-          this.emitStatus(`Could not automatically identify branch for "${storeName}". Defaulting to ${branchId} (Neve Zeev).`);
-      }
-
+      const branchId = this.supermarket.branch_remote_id || '5304';
       this.log(`Targeting branch ID: ${branchId}`);
 
       // Filter and sort files for the target branch

@@ -135,12 +135,12 @@ async function initDb(filename = 'database.sqlite') {
     const defaults = [
       { name: 'שופרסל (כללי)', url: 'https://www.shufersal.co.il/online/he/' },
       { name: 'רמי לוי (כללי)', url: 'https://url.publishedprices.co.il/login' },
-      { name: 'יוחננוף (דיזיין פלוס)', url: 'https://yochananof.co.il/' },
-      { name: 'ויקטורי (שדרות דויד בן גוריון)', url: 'https://www.victoryonline.co.il/' },
-      { name: 'קרפור מרקט (נווה זאב)', url: 'https://www.carrefour.co.il/' },
-      { name: 'קשת טעמים (ישפרו פלאנט)', url: 'https://url.publishedprices.co.il/login' },
+      { name: 'יוחננוף (דיזיין פלוס)', url: 'https://yochananof.co.il/', branch_remote_id: '040' },
+      { name: 'ויקטורי (שדרות דויד בן גוריון)', url: 'https://www.victoryonline.co.il/', branch_remote_id: '97' },
+      { name: 'קרפור מרקט (נווה זאב)', url: 'https://www.carrefour.co.il/', branch_remote_id: '5304' },
+      { name: 'קשת טעמים (ישפרו פלאנט)', url: 'https://url.publishedprices.co.il/login', branch_remote_id: '018' },
       { name: 'טיב טעם', url: 'https://url.publishedprices.co.il/login', branch_remote_id: '515' },
-      { name: 'מחסני השוק (כללי)', url: 'https://www.mahsaneyshak.co.il/online' } 
+      { name: 'מחסני השוק (כללי)', url: 'https://www.mahsaneyshak.co.il/online', branch_remote_id: '97' } 
     ];
 
     for (const s of defaults) {

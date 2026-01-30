@@ -35,19 +35,24 @@ const PriceCell: React.FC<PriceCellProps> = ({ priceInfo }) => {
       flexDirection: 'column', 
       alignItems: 'center', 
       position: 'relative',
-      p: 1
+      p: { xs: 0.25, sm: 1 },
+      minHeight: { xs: 40, sm: 60 },
+      justifyContent: 'center'
     }}>
       {isCheapest && (
         <Chip
-          icon={<StarIcon style={{ fontSize: 14 }} />}
-          label={t('bestPrice')}
+          icon={<StarIcon sx={{ fontSize: { xs: 12, sm: 14 } }} />}
+          label={<Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{t('bestPrice')}</Box>}
           size="small"
           color="success"
           sx={{ 
-            height: 20, 
+            height: { xs: 16, sm: 20 }, 
+            width: { xs: 20, sm: 'auto' },
+            minWidth: { xs: 20, sm: 'auto' },
             fontSize: '0.65rem', 
             mb: 0.5,
-            '& .MuiChip-label': { px: 1 }
+            '& .MuiChip-label': { px: { xs: 0, sm: 1 } },
+            '& .MuiChip-icon': { m: 0 }
           }}
         />
       )}
@@ -59,7 +64,8 @@ const PriceCell: React.FC<PriceCellProps> = ({ priceInfo }) => {
           color: isCheapest ? 'success.main' : 'text.primary',
           textDecoration: promo ? 'underline' : 'none',
           textDecorationStyle: 'dotted',
-          textUnderlineOffset: '3px'
+          textUnderlineOffset: '3px',
+          fontSize: { xs: '0.8rem', sm: '1rem' }
         }}
       >
         {displayPrice}
@@ -67,7 +73,7 @@ const PriceCell: React.FC<PriceCellProps> = ({ priceInfo }) => {
 
       {promo && (
         <Tooltip title={promo} arrow placement="top">
-             <Typography variant="caption" color="primary" sx={{ cursor: 'help', fontSize: '0.7rem' }}>
+             <Typography variant="caption" color="primary" sx={{ cursor: 'help', fontSize: { xs: '0.6rem', sm: '0.7rem' } }}>
                 {t('promo')}
              </Typography>
         </Tooltip>

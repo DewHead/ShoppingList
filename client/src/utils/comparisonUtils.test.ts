@@ -1,6 +1,45 @@
 import { describe, it, expect } from 'vitest';
-import { calculateSmartTotal, PENALTY_PRICE, transformToMatrix, sortComparisonMatrix } from './comparisonUtils';
+import { calculateSmartTotal, PENALTY_PRICE, transformToMatrix, sortComparisonMatrix, calculateBestPrice } from './comparisonUtils';
 import type { ComparisonMatrixRow } from './comparisonUtils';
+
+describe('calculateBestPrice', () => {
+  const mockMatch = {
+    price: 49.9,
+    remote_name: 'אורז בסמטי 5 ק"ג מחנה יהודה',
+    promo_description: '*אורז בסמטי 5 קג מחנה יהודה השני ב₪2 ש מוגבל מנה'
+  };
+
+  it('calculates original price when quantity is 1 and promo is "second for"', () => {
+    const result = calculateBestPrice(mockMatch, 1);
+    expect(result.total).toBe(49.9);
+    expect(result.isPromo).toBe(false);
+  });
+
+  it('calculates promo price when quantity is 2 and promo is "second for"', () => {
+    const result = calculateBestPrice(mockMatch, 2);
+    // 49.9 + 2.0 = 51.9
+    expect(result.total).toBe(51.9);
+    expect(result.isPromo).toBe(true);
+  });
+
+  it('calculates promo price when quantity is 3 and promo is "second for"', () => {
+    const result = calculateBestPrice(mockMatch, 3);
+    // (49.9 + 2.0) + 49.9 = 101.8
+    expect(result.total).toBeCloseTo(101.8);
+    expect(result.isPromo).toBe(true);
+  });
+
+  it('handles standard "X ב ₪Y" promos', () => {
+    const multiMatch = {
+      price: 10,
+      remote_name: 'Pasta',
+      promo_description: 'Pasta 3 ב ₪20'
+    };
+    expect(calculateBestPrice(multiMatch, 1).total).toBe(10);
+    expect(calculateBestPrice(multiMatch, 3).total).toBe(20);
+    expect(calculateBestPrice(multiMatch, 4).total).toBe(30);
+  });
+});
 
 describe('calculateSmartTotal', () => {
   it('calculates total for valid items', () => {

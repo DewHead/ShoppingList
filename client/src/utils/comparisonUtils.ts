@@ -74,22 +74,40 @@ export const calculateBestPrice = (match: any, quantity: number) => {
       const parts = promoDesc.split(/\s+ב-?\s*₪?/);
       if (parts.length >= 2) {
           const lastPart = parts[parts.length - 1];
-          const priceMatch = lastPart.match(/^[\d.]+/);
+          // Strip any % or other non-price chars before parsing
+          const priceMatch = lastPart.replace(/%/g, '').match(/^[\d.]+/);
           
           if (priceMatch) {
               const promoPrice = parseFloat(priceMatch[0]);
               const namePart = parts.slice(0, -1).join(' ב ').trim();
-              const qtyMatch = namePart.match(/\s(\d+)$/);
               
-              let currentTotal = originalTotal;
+              // Try to find quantity: either "Name Qty" or just "Qty" (strip % just in case)
+              const qtyMatch = namePart.replace(/%/g, '').match(/(\s|^)(\d+)$/);
+              
+              const isSecondAt = namePart.endsWith('השני') || namePart.endsWith('ה-2');
 
-              if (qtyMatch && parseInt(qtyMatch[1]) > 1) {
-                  const requiredQty = parseInt(qtyMatch[1]);
-                  const cleanedName = namePart.replace(/\s+\d+$/, '').trim();
+              if (isSecondAt) {
+                  if (quantity >= 2) {
+                      const pairs = Math.floor(quantity / 2);
+                      const remaining = quantity % 2;
+                      const currentTotal = (pairs * (unitPrice + promoPrice)) + (remaining * unitPrice);
+                      
+                      if (currentTotal < bestResult.total) {
+                          bestResult = { 
+                              total: currentTotal, 
+                              isPromo: true, 
+                              originalTotal, 
+                              displayName: namePart || bestResult.displayName 
+                          };
+                      }
+                  }
+              } else if (qtyMatch && parseInt(qtyMatch[2]) > 1) {
+                  const requiredQty = parseInt(qtyMatch[2]);
+                  const cleanedName = namePart.replace(/(\s|^)\d+$/, '').trim();
                   if (quantity >= requiredQty) {
                       const promoGroups = Math.floor(quantity / requiredQty);
                       const remaining = quantity % requiredQty;
-                      currentTotal = (promoGroups * promoPrice) + (remaining * unitPrice);
+                      const currentTotal = (promoGroups * promoPrice) + (remaining * unitPrice);
                       
                       if (currentTotal < bestResult.total) {
                           bestResult = { 
@@ -224,5 +242,18 @@ export const sortComparisonMatrix = (
 
 export const cleanStoreName = (name: string): string => {
   return name.replace(/\s*\(.*?\)/g, '').trim();
+};
+
+export const getStoreLogo = (name: string): string | null => {
+  const lowerName = name.toLowerCase();
+  if (lowerName.includes('שופרסל') || lowerName.includes('shufersal')) return '/logos/shufersal.png';
+  if (lowerName.includes('רמי לוי') || lowerName.includes('rami levy')) return '/logos/rami_levy.png';
+  if (lowerName.includes('יוחננוף') || lowerName.includes('yochananof')) return '/logos/yohananof.png';
+  if (lowerName.includes('ויקטורי') || lowerName.includes('victory')) return '/logos/victory.png';
+  if (lowerName.includes('קרפור') || lowerName.includes('carrefour')) return '/logos/carrefour.png';
+  if (lowerName.includes('קשת טעמים') || lowerName.includes('keshet')) return '/logos/keshet_teamim.png';
+  if (lowerName.includes('טיב טעם') || lowerName.includes('tiv taam')) return '/logos/tiv_taam.png';
+  if (lowerName.includes('מחסני השוק') || lowerName.includes('mahsaney')) return '/logos/mahsaney_hashuk.png';
+  return null;
 };
 

@@ -27,22 +27,28 @@ import BottomNav from './components/BottomNav';
 import { AnimatePresence } from 'framer-motion';
 import PageTransition from './components/PageTransition';
 
-import ShoppingListPage from './pages/ShoppingListPage';
-import SettingsPage from './pages/SettingsPage';
-import ComparisonPage from './pages/ComparisonPage';
-import { ScrapedDataPage } from './pages/ScrapedDataPage';
+const ShoppingListPage = React.lazy(() => import('./pages/ShoppingListPage'));
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
+const ComparisonPage = React.lazy(() => import('./pages/ComparisonPage'));
+const ScrapedDataPage = React.lazy(() => import('./pages/ScrapedDataPage').then(module => ({ default: module.ScrapedDataPage })));
 
 function AnimatedRoutes() {
   const location = useLocation();
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<PageTransition><ShoppingListPage /></PageTransition>} />
-        <Route path="/comparison" element={<PageTransition><ComparisonPage /></PageTransition>} />
-        <Route path="/settings" element={<PageTransition><SettingsPage /></PageTransition>} />
-        <Route path="/scraped-data/:id" element={<PageTransition><ScrapedDataPage /></PageTransition>} />
-      </Routes>
-    </AnimatePresence>
+    <React.Suspense fallback={
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <Typography variant="h6" color="text.secondary">Loading...</Typography>
+      </Box>
+    }>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<PageTransition><ShoppingListPage /></PageTransition>} />
+          <Route path="/comparison" element={<PageTransition><ComparisonPage /></PageTransition>} />
+          <Route path="/settings" element={<PageTransition><SettingsPage /></PageTransition>} />
+          <Route path="/scraped-data/:id" element={<PageTransition><ScrapedDataPage /></PageTransition>} />
+        </Routes>
+      </AnimatePresence>
+    </React.Suspense>
   );
 }
 
@@ -129,7 +135,7 @@ function App() {
 
           <Box component="main" sx={{ 
             flexGrow: 1, 
-            px: { xs: 2, sm: 4, md: 8, lg: 12 }, 
+            px: { xs: 1, sm: 4, md: 8, lg: 12 }, 
             py: { xs: 2, md: 4 }, 
             position: 'relative', 
             zIndex: 1,

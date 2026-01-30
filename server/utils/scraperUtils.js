@@ -17,10 +17,20 @@ async function axiosGetWithRetry(url, retries = 3, delay = 2000, cookieHeader = 
   for (let i = 0; i < retries; i++) {
     try {
       const headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
       };
+      
       if (cookieHeader) {
         headers['Cookie'] = cookieHeader;
+      }
+
+      // Add Referer if it's a file download from PublishedPrices
+      if (url.includes('publishedprices.co.il')) {
+          headers['Referer'] = 'https://url.publishedprices.co.il/file/d/';
       }
 
       return await axios.get(url, { 
@@ -103,12 +113,20 @@ function fixSpacing(text) {
   fixed = fixed.replace(/(\d+)\s*(ליטר|ליט|ל'|ל)(\s|$)/g, '$1 ליטר$3');
 
   // NEW: Add % to trailing fat content numbers (e.g. "גאודה 28" -> "גאודה 28%")
-  // REFINED: Only if it looks like a dairy product AND not followed by count units
+  // REFINED: Only if it looks like a dairy product AND not a promo string
   const isDairyProduct = /(גבינה|גבינ|שמנת|יוגורט|חלב|לאבנה|קוטג|בוראטה|גאודה|טל העמק|עמק)/i.test(text);
-  if (isDairyProduct) {
+  const isPromo = /(ב|קופון|מבצע|השני|השלישי)/i.test(text);
+  
+  if (isDairyProduct && !isPromo) {
       fixed = fixed.replace(/(\D\s)(\d{1,2})(\s|$)/g, (match, p1, p2, p3) => {
           // Explicitly avoid count units
-          if (p3.includes('%') || p3.includes('יחידות') || p3.includes('יח') || p3.includes('גרם') || p3.includes('מל')) return match;
+          if (p3 && (
+              p3.includes('%') || 
+              p3.includes('יחידות') || 
+              p3.includes('יח') || 
+              p3.includes('גרם') || 
+              p3.includes('מל')
+          )) return match;
           return `${p1}${p2}%${p3}`;
       });
   }
@@ -120,25 +138,30 @@ function fixSpacing(text) {
 
 function formatPromo(text) {
   if (!text) return text;
-  let fixed = fixSpacing(text);
   
-  // Replace ש"ח or שח with ₪
-  fixed = fixed.replace(/ש"ח/g, '₪');
-  fixed = fixed.replace(/(\s|^)שח(\s|$)/g, '$1₪$2');
-  fixed = fixed.replace(/(\d)שח/g, '$1 ₪');
-
-  // Handle "X ב Y" and ensure ₪ is present
-  // Matches "2 ב 13" but avoids "2 ב 1" which is often product type (2-in-1)
-  fixed = fixed.replace(/(\d+)\s+ב-?\s*(?!₪)([2-9]\d*(\.\d+)?|1\d+(\.\d+)?)/g, '$1 ב ₪$2');
+  // Strip any existing "₪" to avoid double-processing
+  let fixed = String(text).replace(/₪/g, '').replace(/ש"ח/g, '').replace(/שח/g, '');
   
-  // Handle "ב Y" at the end or after a space (for single item promos)
-  // Ensure it's not followed by a % or already has a currency symbol
-  fixed = fixed.replace(/(\sב-?)\s*(?!₪)(\d+(\.\d+)?)(?!\d)(?!\s*(%|₪|ש"ח|שח))/g, '$1₪$2');
+  fixed = fixSpacing(fixed);
+  
+  // Restore/Add ₪ in correct places
+  // Handle "X ב Y"
+  if (fixed) {
+    fixed = fixed.replace(/(\d+)\s+ב-?\s*(\d+(\.\d+)?)/g, '$1 ב ₪$2');
+    
+    // Handle "קופון ... ב Y"
+    if (fixed.includes('קופון')) {
+        fixed = fixed.replace(/ב-?\s*(\d+(\.\d+)?)$/, 'ב ₪$1');
+    }
 
-  // Normalize ₪ position
-  fixed = fixed.replace(/(\d+(\.\d+)?)\s*₪/g, '₪$1');
-  fixed = fixed.replace(/₪\s+/g, '₪');
-  fixed = fixed.replace(/₪+/g, '₪');
+    // Handle single "ב Y" if not already caught
+    fixed = fixed.replace(/(\sב-?)\s*(\d+(\.\d+)?)(?!\d)(?!\s*%)/g, '$1₪$2');
+
+    // Normalize ₪ position
+    fixed = fixed.replace(/(\d+(\.\d+)?)\s*₪/g, '₪$1');
+    fixed = fixed.replace(/₪\s+/g, '₪');
+    fixed = fixed.replace(/₪+/g, '₪');
+  }
 
   return fixed;
 }

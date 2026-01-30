@@ -38,7 +38,7 @@ function Main() {
 
   useEffect(() => {
     if (background) {
-      document.body.style.backgroundImage = `url(/${background}.png)`;
+      document.body.style.backgroundImage = `url(/${background}.webp)`;
     } else {
       document.body.style.backgroundImage = 'none';
     }

@@ -15,7 +15,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { ExpandMore, ExpandLess, PushPin, PushPinOutlined } from '@mui/icons-material';
 import { AlertCircle } from 'lucide-react';
 import { useTranslation } from '../useTranslation';
-import { calculateBestPrice, cleanStoreName } from '../utils/comparisonUtils';
+import { calculateBestPrice, cleanStoreName, getStoreLogo } from '../utils/comparisonUtils';
 
 interface SearchResult {
   supermarket_id: number;
@@ -188,11 +188,23 @@ export default function ShoppingListSidePanel({
                     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                         {Object.entries(groupedMatchesByStore).map(([storeName, itemsWithMatches]) => {
                             const isExpanded = expandedStores.includes(storeName);
+                            const storeLogo = getStoreLogo(storeName);
                             return (
                                 <Box key={storeName} sx={{ borderBottom: '1px solid', borderColor: 'divider', '&:last-child': { borderBottom: 'none' } }}>
-                                    <Box onClick={() => toggleStore(storeName)} sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', p: 1.5, '&:hover': { bgcolor: 'action.hover' } }}>
-                                        <IconButton size="small" sx={{ p: 0, mr: 1 }}>{isExpanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}</IconButton>
-                                        <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>{cleanStoreName(storeName)}</Typography>
+                                    <Box onClick={() => toggleStore(storeName)} sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', p: 1.5, gap: 1.5, '&:hover': { bgcolor: 'action.hover' } }}>
+                                        <IconButton size="small" sx={{ p: 0 }}>{isExpanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}</IconButton>
+                                        {storeLogo ? (
+                                            <Box sx={{ width: 100, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <Box 
+                                                    component="img" 
+                                                    src={storeLogo} 
+                                                    alt={storeName}
+                                                    sx={{ height: '100%', width: '100%', objectFit: 'contain' }}
+                                                />
+                                            </Box>
+                                        ) : (
+                                            <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>{cleanStoreName(storeName)}</Typography>
+                                        )}
                                     </Box>
                                     {!isExpanded && (
                                         <Box sx={{ pl: 1, pr: 1, pb: 1 }}>
@@ -227,10 +239,24 @@ export default function ShoppingListSidePanel({
           {cheapestStore && selectedItemIds.length === 0 && (
             <Paper variant="outlined" sx={{ p: 3, bgcolor: 'background.paper' }}>
               <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Box>
-                  <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: '0.1em' }}>{t('cheapestStore')}</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, mt: 0.5 }}>{cleanStoreName(cheapestStore.name)}</Typography>
-                  {cheapestStore.missing > 0 && <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>* {cheapestStore.missing} items missing</Typography>}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  {getStoreLogo(cheapestStore.name) && (
+                    <Box sx={{ width: 140, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Box 
+                        component="img" 
+                        src={getStoreLogo(cheapestStore.name)!} 
+                        alt={cheapestStore.name}
+                        sx={{ height: '100%', width: '100%', objectFit: 'contain' }}
+                      />
+                    </Box>
+                  )}
+                  <Box>
+                    <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: '0.1em' }}>{t('cheapestStore')}</Typography>
+                    {!getStoreLogo(cheapestStore.name) && (
+                      <Typography variant="h5" sx={{ fontWeight: 700, mt: -0.5 }}>{cleanStoreName(cheapestStore.name)}</Typography>
+                    )}
+                    {cheapestStore.missing > 0 && <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>* {cheapestStore.missing} items missing</Typography>}
+                  </Box>
                 </Box>
                 <Typography variant="h4" color="primary.main" sx={{ fontWeight: 800 }}>₪{cheapestStore.total}</Typography>
               </Box>

@@ -22,9 +22,9 @@ class YohananofScraper extends BaseScraper {
       const fileLinks = await this.levyBase.getFileLinks(page);
       this.log(`Found ${fileLinks.length} .gz files in Yohananof portal.`);
       
-      const targetStoreId = '001'; // Defaulting to 001 for now
+      const targetStoreId = this.supermarket.branch_remote_id || '040';
       const filesToProcess = this.levyBase.filterLatestFiles(fileLinks, targetStoreId);
-      this.log(`Processing ${filesToProcess.length} latest Full files for Yohananof.`);
+      this.log(`Processing ${filesToProcess.length} latest Full files for Yohananof for Store ID ${targetStoreId}.`);
 
       // 3. Process Files
       const branchInfo = this.supermarket.name; 

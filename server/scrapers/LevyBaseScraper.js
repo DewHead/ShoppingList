@@ -21,9 +21,16 @@ class LevyBaseScraper {
         await page.fill('input[name="username"]', username);
         await page.waitForSelector('button#login-button', { state: 'visible', timeout: 60000 });
         await page.click('button#login-button');
-        await page.waitForURL('**/*', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        
+        // Wait for the main content to load (the table of files)
+        try {
+            await page.waitForSelector('table, a[href*=".gz"]', { state: 'attached', timeout: 30000 });
+        } catch (e) {
+            this.scraper.error("Timeout waiting for file list after login. Proceeding anyway...", e.message);
+        }
         
         const cookies = await page.context().cookies();
+        // Important: PublishedPrices often uses cookies from the specific subdomain where files are hosted
         return cookies.map(c => `${c.name}=${c.value}`).join('; ');
     }
 
@@ -43,71 +50,158 @@ class LevyBaseScraper {
      * Filter links for the latest Price and Promo files for a specific store.
      */
     filterLatestFiles(fileLinks, storeId) {
-        let latestPrice = fileLinks
-            .filter(l => l.name.includes('PriceFull') && l.name.includes(`-${storeId}-`))
-            .sort((a, b) => b.name.localeCompare(a.name))[0];
-        
-        if (!latestPrice) {
-            latestPrice = fileLinks
-                .filter(l => l.name.includes('PriceFull'))
-                .sort((a, b) => b.name.localeCompare(a.name))[0];
-        }
-        
-        let latestPromo = fileLinks
-            .filter(l => l.name.includes('PromoFull') && l.name.includes(`-${storeId}-`))
-            .sort((a, b) => b.name.localeCompare(a.name))[0];
+        const getLatest = (prefix) => {
+            const matches = fileLinks.filter(l => 
+                l.name.toLowerCase().includes(prefix.toLowerCase()) && 
+                l.name.includes(`-${storeId}-`)
+            );
+            
+            return matches.sort((a, b) => b.name.localeCompare(a.name))[0];
+        };
 
-        if (!latestPromo) {
-            latestPromo = fileLinks
-                .filter(l => l.name.includes('PromoFull'))
-                .sort((a, b) => b.name.localeCompare(a.name))[0];
-        }
+        const latestPriceFull = getLatest('PriceFull');
+        const latestPrice = getLatest('Price');
+        const latestPromoFull = getLatest('PromoFull');
+        const latestPromo = getLatest('Promo');
 
-        return [latestPrice, latestPromo].filter(f => f);
+        const results = [];
+        if (latestPriceFull) results.push(latestPriceFull);
+        else if (latestPrice) results.push(latestPrice);
+        
+        if (latestPromoFull) results.push(latestPromoFull);
+        else if (latestPromo) results.push(latestPromo);
+
+        return results;
     }
 
     /**
      * Download and parse a .gz or tar.gz file.
      */
-    async processFile(url, type, cookieHeader, branchInfo) {
-        const { axiosGetWithRetry } = require('../utils/scraperUtils');
-        const response = await axiosGetWithRetry(url, 3, 2000, cookieHeader);
+    async processFile(url, type, cookieHeader, branchInfo, page) {
+        // Use the browser page to download to ensure session is maintained
+        this.scraper.emitStatus(`Downloading ${type} via browser...`);
         
-        let decompressedBuffer;
+        let buffer;
         try {
-            decompressedBuffer = zlib.gunzipSync(response.data);
+            // Wait for the download event while clicking or navigating
+            const [download] = await Promise.all([
+                page.waitForEvent('download', { timeout: 60000 }),
+                page.evaluate((targetUrl) => {
+                    const a = document.createElement('a');
+                    a.href = targetUrl;
+                    a.click();
+                }, url)
+            ]);
+            
+            const stream = await download.createReadStream();
+            const chunks = [];
+            for await (const chunk of stream) {
+                chunks.push(chunk);
+            }
+            buffer = Buffer.concat(chunks);
         } catch (e) {
-            this.scraper.error(`Decompression error for ${url}:`, e.message);
+            this.scraper.error(`Download failed for ${url}:`, e.message);
             throw e;
         }
-
-        let xmlContent = null;
-        const startSnippet = decompressedBuffer.toString('utf8', 0, 200);
         
-        if (startSnippet.includes('<?xml') || startSnippet.includes('<Root') || startSnippet.includes('<root')) {
-            xmlContent = decompressedBuffer.toString('utf8');
-        } else {
-            const extractedFiles = await extractTarballInMemory(decompressedBuffer);
-            const baseName = url.split('/').pop().replace(/\.gz$/i, '');
-            const expectedPath = `${baseName}/${baseName}.xml`;
+        if (!buffer || buffer.length === 0) {
+            throw new Error(`Empty response from ${url}`);
+        }
+
+        const magic = buffer.slice(0, 2);
+        const magicHex = magic.toString('hex');
+        this.scraper.log(`Downloaded ${buffer.length} bytes. Magic: ${magicHex}`);
+
+        let decompressedBuffer = buffer;
+        let isDecompressed = false;
+
+        // Try GZIP (Magic: 1f 8b)
+        if (magic[0] === 0x1f && magic[1] === 0x8b) {
+            try {
+                decompressedBuffer = zlib.gunzipSync(buffer);
+                isDecompressed = true;
+            } catch (e) {
+                this.scraper.error(`Gunzip failed despite magic match: ${e.message}`);
+            }
+        } else if (magicHex === '504b') {
+            // ZIP File (Magic: 50 4b)
+            this.scraper.log(`Detected ZIP format for ${url}`);
+            const fs = require('fs');
+            const path = require('path');
+            const { execSync } = require('child_process');
+            const tmpDir = '/home/tal/.gemini/tmp/25d78cc60258baa0378d771a731722f289f86c80fa5a615666d6d2b261bba438';
+            const tmpFile = path.join(tmpDir, `tmp_${Date.now()}.zip`);
             
-            if (extractedFiles[expectedPath]) {
-                xmlContent = extractedFiles[expectedPath].toString('utf8');
-            } else {
-                for (const filePath in extractedFiles) {
-                    if (filePath.endsWith('.xml') && !filePath.includes('Stores')) {
-                        xmlContent = extractedFiles[filePath].toString('utf8');
-                        break;
-                    }
+            try {
+                fs.writeFileSync(tmpFile, buffer);
+                // unzip -p extracts the first file in the zip to stdout
+                // Large XML files can exceed default 200KB buffer, so we increase it to 50MB
+                decompressedBuffer = execSync(`unzip -p ${tmpFile}`, { maxBuffer: 1024 * 1024 * 50 });
+                isDecompressed = true;
+                fs.unlinkSync(tmpFile);
+            } catch (zipErr) {
+                this.scraper.error(`ZIP extraction failed for ${url}:`, zipErr.message);
+                if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
+            }
+        }
+        
+        if (!isDecompressed || !decompressedBuffer) {
+            // Try Inflate?
+            try {
+                decompressedBuffer = zlib.inflateSync(buffer);
+                isDecompressed = true;
+            } catch (e2) {
+                // Not compressed or unknown format, check if it's already XML
+                const firstBytes = buffer.slice(0, 100).toString('utf8');
+                if (firstBytes.trim().startsWith('<')) {
+                    decompressedBuffer = buffer;
+                    isDecompressed = true;
+                } else {
+                    this.scraper.error(`Decompression failed for ${url}. Magic: ${magicHex}. Data doesn't look like XML either.`);
+                    throw new Error(`Failed to decompress or parse file: ${url}`);
                 }
             }
         }
 
-        if (!xmlContent) throw new Error(`No XML content found for ${url}`);
+        if (!decompressedBuffer) throw new Error(`Decompression resulted in null buffer for ${url}`);
+
+        let xmlContent = null;
+        const startSnippet = decompressedBuffer.toString('utf8', 0, 200);
+        
+        if (startSnippet && (startSnippet.includes('<?xml') || startSnippet.includes('<Root') || startSnippet.includes('<root') || startSnippet.includes('<Prices') || startSnippet.includes('<Promos') || startSnippet.includes('<Promotions'))) {
+            xmlContent = decompressedBuffer.toString('utf8');
+        } else {
+            // Might be a tarball
+            try {
+                const extractedFiles = await extractTarballInMemory(decompressedBuffer);
+                const baseName = url.split('/').pop().replace(/\.gz$/i, '');
+                const expectedPath = `${baseName}/${baseName}.xml`;
+                
+                if (extractedFiles[expectedPath]) {
+                    xmlContent = extractedFiles[expectedPath].toString('utf8');
+                } else {
+                    for (const filePath in extractedFiles) {
+                        if (filePath.endsWith('.xml') && !filePath.includes('Stores')) {
+                            xmlContent = extractedFiles[filePath].toString('utf8');
+                            break;
+                        }
+                    }
+                }
+            } catch (tarErr) {
+                this.scraper.error(`Failed to extract tarball from ${url}:`, tarErr.message);
+            }
+        }
+
+        if (xmlContent && xmlContent.includes('Stores')) {
+            // Skip store files if they accidentally got here
+            return [];
+        }
+
+        if (!xmlContent) throw new Error(`No XML content found for ${url} (Decompressed: ${isDecompressed})`);
 
         const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
         const result = await parser.parseStringPromise(xmlContent);
-        const root = result.root || result.Root;
+        const root = result.root || result.Root || result.Prices || result.Promotions || result.Promos;
 
         if (type === 'PRICE') {
             return this.parsePriceItems(root, branchInfo);
@@ -123,14 +217,14 @@ class LevyBaseScraper {
         return itemArray.map(product => {
             const qty = product.Quantity || product.ItemQuantity || '';
             const unit = product.UnitOfMeasure || '';
-            let fullName = product.ItemName;
-            if (qty && !fullName.includes(qty)) fullName += ` ${qty} ${unit}`;
+            let fullName = product.ItemNm || product.ItemName || product.ManufacturerItemDescription || 'Unknown Item';
+            if (fullName && qty && !String(fullName).includes(String(qty))) fullName += ` ${qty} ${unit}`;
 
             return {
                 supermarket_id: this.scraper.supermarket.id,
                 item_id: null,
                 remote_id: product.ItemCode,
-                remote_name: fixSpacing(fullName),
+                remote_name: fixSpacing(String(fullName)),
                 branch_info: branchInfo,
                 price: parseFloat(product.ItemPrice),
                 unit_of_measure: unit || null,

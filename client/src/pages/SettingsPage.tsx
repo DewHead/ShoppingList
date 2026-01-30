@@ -27,7 +27,7 @@ import { io } from 'socket.io-client';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { AppContext } from '../AppContext';
-import { cleanStoreName } from '../utils/comparisonUtils';
+import { cleanStoreName, getStoreLogo } from '../utils/comparisonUtils';
 import './SettingsPage.css';
 import SettingsCard from '../components/SettingsCard';
 
@@ -42,16 +42,16 @@ interface Supermarket {
 }
 
 const backgroundOptions = [
-  { name: 'monochrome', thumbnail: '/monochrome.png' },
-  { name: 'boho', thumbnail: '/boho.png' },
-  { name: 'cyberpunk', thumbnail: '/cyberpunk.png' },
-  { name: 'lineart', thumbnail: '/lineart.png' },
-  { name: 'nordic', thumbnail: '/nordic.png' },
-  { name: 'oilpainting', thumbnail: '/oilpainting.png' },
-  { name: 'popart', thumbnail: '/popart.png' },
-  { name: 'steampunk', thumbnail: '/steampunk.png' },
-  { name: 'tron', thumbnail: '/tron.png' },
-  { name: 'watercolor', thumbnail: '/watercolor.png' },
+  { name: 'monochrome', thumbnail: '/monochrome.webp' },
+  { name: 'boho', thumbnail: '/boho.webp' },
+  { name: 'cyberpunk', thumbnail: '/cyberpunk.webp' },
+  { name: 'lineart', thumbnail: '/lineart.webp' },
+  { name: 'nordic', thumbnail: '/nordic.webp' },
+  { name: 'oilpainting', thumbnail: '/oilpainting.webp' },
+  { name: 'popart', thumbnail: '/popart.webp' },
+  { name: 'steampunk', thumbnail: '/steampunk.webp' },
+  { name: 'tron', thumbnail: '/tron.webp' },
+  { name: 'watercolor', thumbnail: '/watercolor.webp' },
 ];
 
 const SettingsPage = () => {
@@ -170,25 +170,59 @@ const SettingsPage = () => {
                         borderColor: 'divider',
                         }}
                     >
-                        <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, flexGrow: 1, width: '100%' }}>
-                            <Typography
-                                variant="h6"
-                                title={s.name}
-                                noWrap
-                                sx={{ fontWeight: 600, fontSize: '1.1rem', opacity: s.is_active ? 1 : 0.6 }}
-                            >
-                                {cleanStoreName(s.name)}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ opacity: s.is_active ? 0.7 : 0.4 }}>
-                                {scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' ? (
-                                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-                                        {scrapingStates[s.id] === 'Starting scrape...' && <CircularProgress size={14} />}
-                                        {scrapingStates[s.id]}
-                                    </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1, minWidth: 0 }}>
+                            <Box sx={{ minWidth: { sm: 160 }, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                {getStoreLogo(s.name) ? (
+                                    <Box 
+                                        component="img" 
+                                        src={getStoreLogo(s.name)!} 
+                                        alt={s.name}
+                                        sx={{ 
+                                            height: 36, 
+                                            width: '100%', 
+                                            maxWidth: 140, 
+                                            objectFit: 'contain', 
+                                            flexShrink: 0, 
+                                            opacity: s.is_active ? 1 : 0.6 
+                                        }}
+                                    />
                                 ) : (
-                                    s.last_scrape_time ? t('lastScrape', { date: formatDistanceToNow(new Date(s.last_scrape_time), { addSuffix: true, locale: language === 'he' ? he : undefined }) }) : t('neverScraped')
+                                    <Typography
+                                        variant="h6"
+                                        title={s.name}
+                                        noWrap
+                                        sx={{ fontWeight: 600, fontSize: '1.1rem', opacity: s.is_active ? 1 : 0.6 }}
+                                    >
+                                        {cleanStoreName(s.name)}
+                                    </Typography>
                                 )}
-                            </Typography>
+                            </Box>
+                            <Box sx={{ 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                minWidth: 0, 
+                                flexGrow: 1, 
+                                alignItems: { sm: 'flex-end' },
+                                px: { sm: 3 } 
+                            }}>
+                                <Typography 
+                                    variant="caption" 
+                                    color="text.secondary" 
+                                    sx={{ 
+                                        opacity: s.is_active ? 0.7 : 0.4,
+                                        textAlign: { sm: 'right' }
+                                    }}
+                                >
+                                    {scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' ? (
+                                        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                                            {scrapingStates[s.id] === 'Starting scrape...' && <CircularProgress size={14} />}
+                                            {scrapingStates[s.id]}
+                                        </Box>
+                                    ) : (
+                                        s.last_scrape_time ? t('lastScrape', { date: formatDistanceToNow(new Date(s.last_scrape_time), { addSuffix: true, locale: language === 'he' ? he : undefined }) }) : t('neverScraped')
+                                    )}
+                                </Typography>
+                            </Box>
                         </Box>
 
                         <Box sx={{ 

@@ -185,8 +185,6 @@ const ComparisonPage = () => {
     return store ? { name: store.name, total: winner!.total } : null;
   })() : null;
 
-  const activeStores = supermarkets.filter(s => s.is_active);
-
   const storeTotalsMap = useMemo(() => {
     const map: Record<number, any> = {};
     storeTotals.forEach(st => {
@@ -194,6 +192,28 @@ const ComparisonPage = () => {
     });
     return map;
   }, [storeTotals]);
+
+  const activeStores = useMemo(() => {
+    const active = supermarkets.filter(s => s.is_active);
+    return [...active].sort((a, b) => {
+      const totalA = storeTotalsMap[a.id];
+      const totalB = storeTotalsMap[b.id];
+      
+      const valA = totalA?.isValid ? parseFloat(totalA.total) : Infinity;
+      const valB = totalB?.isValid ? parseFloat(totalB.total) : Infinity;
+      
+      if (valA === valB) return 0;
+      
+      if (language === 'he') {
+        // For RTL, the last element in the array is the leftmost column.
+        // To have lowest on the left, the lowest price should be at the end of the array.
+        return valB - valA;
+      }
+      // For LTR, the first element (after Product) is the leftmost column.
+      // To have lowest on the left, the lowest price should be at the beginning of the array.
+      return valA - valB;
+    });
+  }, [supermarkets, storeTotalsMap, language]);
 
   const matrix = useMemo(() => 
     transformToMatrix(localShoppingListItems, filteredStoreResults), 

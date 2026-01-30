@@ -1,0 +1,8 @@
+{
+  "track_id": "comparison_refresh_optimization_20260130",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-01-30T10:00:00Z",
+  "updated_at": "2026-01-30T10:00:00Z",
+  "description": "on the compare page, when refreshing the data, there is no need for loading circles in all cells. it's enough to have one loading circle under the store logo. after the data is refreshed, show the totale cart price of each store under it's respective logo. the cheapest cart price should stand out."
+}

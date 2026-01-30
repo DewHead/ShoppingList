@@ -21,7 +21,7 @@ import {
 } from '@mui/material';
 import { ArrowLeft, AlertCircle, CreditCard, Settings, GripVertical, Search } from 'lucide-react';
 import { AppContext } from '../AppContext';
-import { cleanStoreName } from '../utils/comparisonUtils';
+import { cleanStoreName, getStoreLogo } from '../utils/comparisonUtils';
 
 interface SupermarketItem {
   id: number;
@@ -278,9 +278,25 @@ export const ScrapedDataPage: React.FC = () => {
             <button onClick={() => navigate('/settings')} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
               {language === 'he' ? <ArrowLeft className="transform rotate-180" /> : <ArrowLeft />}
             </button>
-            <h1 className={`text-2xl font-bold ${language === 'he' ? 'mr-4' : 'ml-4'}`}>
-              {t('scrapedDataTitle').replace('%id%', cleanStoreName(storeName) || id || '')}
-            </h1>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: language === 'he' ? 0 : 4, mr: language === 'he' ? 4 : 0 }}>
+              {getStoreLogo(storeName) ? (
+                <>
+                  <h1 className="text-2xl font-bold">
+                    {language === 'he' ? 'נתונים שנאספו מ' : 'Scraped Data'}
+                  </h1>
+                  <Box 
+                    component="img" 
+                    src={getStoreLogo(storeName)!} 
+                    alt={storeName}
+                    sx={{ height: 48, width: 'auto', objectFit: 'contain' }}
+                  />
+                </>
+              ) : (
+                <h1 className="text-2xl font-bold">
+                  {t('scrapedDataTitle').replace('%id%', cleanStoreName(storeName) || id || '')}
+                </h1>
+              )}
+            </Box>
           </div>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>

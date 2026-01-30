@@ -11,7 +11,8 @@ import {
   Box,
   Typography,
   CircularProgress,
-  Tooltip
+  Tooltip,
+  useTheme
 } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import type { ComparisonMatrixRow } from '../utils/comparisonUtils';
@@ -51,6 +52,8 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
   minTotal = null
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const isRtl = theme.direction === 'rtl';
 
   const createSortHandler = (property: 'product' | number) => () => {
     const isAsc = sortConfig.key === property && sortConfig.direction === 'asc';
@@ -84,9 +87,12 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
                 fontWeight: 'bold', 
                 backgroundColor: 'background.paper',
                 position: 'sticky',
-                left: 0,
+                left: isRtl ? 'auto' : 0,
+                right: isRtl ? 0 : 'auto',
                 zIndex: 3, // Higher than other headers
-                minWidth: 150
+                minWidth: { xs: 100, sm: 150 },
+                maxWidth: { xs: 120, sm: 250 },
+                width: { xs: 100, sm: 150 }
               }}
             >
               <TableSortLabel
@@ -108,7 +114,7 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
                   align="center"
                   sx={{ 
                     fontWeight: 'bold', 
-                    minWidth: 120,
+                    minWidth: { xs: 80, sm: 120 },
                     backgroundColor: 'background.paper'
                   }}
                 >
@@ -119,7 +125,13 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
                       onClick={createSortHandler(store.id)}
                     >
                       {getStoreLogo(store.name) ? (
-                        <Box sx={{ width: 120, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Box sx={{ 
+                          width: { xs: 80, sm: 120 }, 
+                          height: 32, 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center' 
+                        }}>
                           <Box 
                             component="img" 
                             src={getStoreLogo(store.name)!} 
@@ -142,7 +154,7 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
                           variant="subtitle2" 
                           sx={{ 
                             fontWeight: isCheapest ? 900 : 600,
-                            fontSize: isCheapest ? '1.1rem' : '0.875rem',
+                            fontSize: isCheapest ? { xs: '0.9rem', sm: '1.1rem' } : { xs: '0.75rem', sm: '0.875rem' },
                             bgcolor: isCheapest ? 'success.light' : 'transparent',
                             px: isCheapest ? 1 : 0,
                             borderRadius: 1,
@@ -177,13 +189,29 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
                 scope="row"
                 sx={{ 
                   position: 'sticky',
-                  left: 0,
+                  left: isRtl ? 'auto' : 0,
+                  right: isRtl ? 0 : 'auto',
                   backgroundColor: 'background.paper',
                   zIndex: 1,
-                  fontWeight: 500
+                  fontWeight: 500,
+                  minWidth: { xs: 100, sm: 150 },
+                  maxWidth: { xs: 120, sm: 250 },
+                  width: { xs: 100, sm: 150 },
+                  padding: { xs: '8px 4px', sm: '16px' }
                 }}
               >
-                <Typography variant="body2" sx={{ lineHeight: 1.2 }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    lineHeight: 1.2,
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}
+                >
                   {row.productName}
                 </Typography>
               </TableCell>
