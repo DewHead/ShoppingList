@@ -47,3 +47,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: create scraper for keshet teamim. same flow as rami levi and yohananof but with different username. the username is Keshet. no password needed.**
 *Link: [./tracks/keshet_teamim_scraper_20250514/](./tracks/keshet_teamim_scraper_20250514/)*
+
+---
+
+- [ ] **Track: refactor search capabilities to have a robust and smart search for products in the hebrew language so that search terms provide the best relevant results.**
+*Link: [./tracks/hebrew_smart_search_20260130/](./tracks/hebrew_smart_search_20260130/)*
