@@ -119,6 +119,14 @@ async function initDb(filename = 'database.sqlite') {
         await db.run('DELETE FROM items_fts WHERE supermarket_id = ?', [tayo.id]);
         await db.run('DELETE FROM supermarkets WHERE id = ?', [tayo.id]);
     }
+
+    // Ensure Tiv Taam exists
+    const tivTaam = await db.get('SELECT id FROM supermarkets WHERE name LIKE ?', ['%טיב טעם%']);
+    if (!tivTaam) {
+        console.log('Adding Tiv Taam to supermarkets...');
+        await db.run('INSERT INTO supermarkets (name, url, branch_remote_id) VALUES (?, ?, ?)', 
+            ['טיב טעם', 'https://url.publishedprices.co.il/login', '515']);
+    }
   } catch (err) { console.error('Migration error:', err.message); }
 
   // Seed default supermarkets if empty
@@ -131,12 +139,12 @@ async function initDb(filename = 'database.sqlite') {
       { name: 'ויקטורי (שדרות דויד בן גוריון)', url: 'https://www.victoryonline.co.il/' },
       { name: 'קרפור מרקט (נווה זאב)', url: 'https://www.carrefour.co.il/' },
       { name: 'קשת טעמים (ישפרו פלאנט)', url: 'https://url.publishedprices.co.il/login' },
-      { name: 'טיב טעם', url: 'https://url.publishedprices.co.il/login' },
+      { name: 'טיב טעם', url: 'https://url.publishedprices.co.il/login', branch_remote_id: '515' },
       { name: 'מחסני השוק (כללי)', url: 'https://www.mahsaneyshak.co.il/online' } 
     ];
 
     for (const s of defaults) {
-      await db.run('INSERT INTO supermarkets (name, url) VALUES (?, ?)', [s.name, s.url]);
+      await db.run('INSERT INTO supermarkets (name, url, branch_remote_id) VALUES (?, ?, ?)', [s.name, s.url, s.branch_remote_id || null]);
     }
   }
 
