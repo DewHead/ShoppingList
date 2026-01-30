@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { 
   Typography, 
   Box, 
@@ -207,7 +207,7 @@ const ShoppingListPage = () => {
     }
   };
 
-  const addItem = async (name: string, quantity: number) => {
+  const addItem = useCallback(async (name: string, quantity: number) => {
     if (!name) return;
     let itemName = name;
     const hebrewConverted = toHebrew(itemName);
@@ -230,7 +230,7 @@ const ShoppingListPage = () => {
           handleItemClick(newItem);
       }
     }
-  };
+  }, [items, t]);
 
   const removeItem = async (id: number) => {
     setSelectedItemIds(prev => prev.filter(selectedId => selectedId !== id));

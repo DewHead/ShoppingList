@@ -8,7 +8,7 @@ interface PriceCellProps {
   priceInfo: PriceInfo;
 }
 
-const PriceCell: React.FC<PriceCellProps> = ({ priceInfo }) => {
+const PriceCell: React.FC<PriceCellProps> = React.memo(({ priceInfo }) => {
   const { t } = useTranslation();
 
   if (!priceInfo) {
@@ -80,6 +80,6 @@ const PriceCell: React.FC<PriceCellProps> = ({ priceInfo }) => {
       )}
     </Box>
   );
-};
+});
 
 export default PriceCell;

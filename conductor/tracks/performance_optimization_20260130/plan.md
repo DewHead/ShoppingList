@@ -7,14 +7,14 @@
 
 ## Phase 2: Frontend List Performance
 - [x] Task: Virtualize Shopping List 0fcaf63
-- [x] Task: Virtualize Comparison Table 0fcaf63
-- [~] Task: Optimize MUI/Emotion Styles
+- [x] Task: Virtualize Comparison Table 1464342
+- [x] Task: Optimize MUI/Emotion Styles 1464342
     - [ ] Audit `PriceCell` and `AddItemFAB` for unnecessary re-renders.
     - [ ] Use `React.memo` or `useMemo` where expensive style calculations or components are detected.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Frontend List Performance' (Protocol in workflow.md)
 
 ## Phase 3: Backend & Scraper Efficiency
-- [ ] Task: Implement Scraper Cache (TTL)
+- [~] Task: Implement Scraper Cache (TTL)
     - [ ] Write failing tests for `server/scraper.js` or a new cache utility to verify TTL logic (e.g., skip scrape if data is < 1 hour old).
     - [ ] Implement a simple memory-based or SQLite-backed cache for scraped results.
     - [ ] Update the scraper dispatch logic to check the cache before launching a browser instance.
