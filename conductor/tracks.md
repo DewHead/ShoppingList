@@ -62,3 +62,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: since each store has different formatting for their product names, i want to standardize the product names format accros all stores.**
 *Link: [./tracks/product_name_standardization_20260130/](./tracks/product_name_standardization_20260130/)*
+
+---
+
+- [x] **Track: Comparison Page Refresh Optimization**
+*Link: [./tracks/comparison_refresh_optimization_20260130/](./tracks/comparison_refresh_optimization_20260130/)*
