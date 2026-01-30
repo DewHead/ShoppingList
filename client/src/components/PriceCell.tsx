@@ -14,7 +14,7 @@ const PriceCell: React.FC<PriceCellProps> = React.memo(({ priceInfo }) => {
   if (!priceInfo) {
     return (
       <Typography variant="body2" color="text.disabled" align="center">
-        ...
+        -
       </Typography>
     );
   }

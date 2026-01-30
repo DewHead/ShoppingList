@@ -29,7 +29,8 @@ describe('scrapeAllStores', () => {
     await scrapeAllStores(supermarkets, shoppingList, io, saveDiscoveryResults);
 
     expect(scraper.scrapeStore).toHaveBeenCalledTimes(5);
-    expect(maxConcurrent).toBeGreaterThan(1); // Parallelism is happening
-    expect(maxConcurrent).toBeLessThanOrEqual(3); // Concurrency limit respected
+    // Since we now just fire all promises and let scrapeStore handle queuing,
+    // maxConcurrent in this mock will be 5.
+    expect(maxConcurrent).toBe(5);
   });
 });
