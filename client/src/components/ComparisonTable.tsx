@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import type { ComparisonMatrixRow } from '../utils/comparisonUtils';
-import { cleanStoreName } from '../utils/comparisonUtils';
+import { cleanStoreName, getStoreLogo } from '../utils/comparisonUtils';
 import PriceCell from './PriceCell';
 import { useTranslation } from '../useTranslation';
 
@@ -24,12 +24,21 @@ interface Store {
   name: string;
 }
 
+export interface StoreTotal {
+  id: number;
+  total: string;
+  missing: number;
+  isValid: boolean;
+}
+
 interface ComparisonTableProps {
   data: ComparisonMatrixRow[];
   activeStores: Store[];
   onSort: (columnId: 'product' | number, direction: 'asc' | 'desc') => void;
   sortConfig: { key: 'product' | number; direction: 'asc' | 'desc' };
   storeStatuses?: Record<number, string>;
+  storeTotals?: Record<number, StoreTotal>;
+  minTotal?: number | null;
 }
 
 const ComparisonTable: React.FC<ComparisonTableProps> = ({ 
@@ -37,7 +46,9 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
   activeStores, 
   onSort, 
   sortConfig,
-  storeStatuses = {}
+  storeStatuses = {},
+  storeTotals = {},
+  minTotal = null
 }) => {
   const { t } = useTranslation();
 
@@ -88,6 +99,9 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
             </TableCell>
             {activeStores.map((store) => {
               const statusInfo = getStoreStatus(store.id);
+              const totalData = storeTotals[store.id];
+              const isCheapest = minTotal !== null && totalData?.isValid && parseFloat(totalData.total) === minTotal;
+
               return (
                 <TableCell 
                   key={store.id} 
@@ -98,25 +112,47 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
                     backgroundColor: 'background.paper'
                   }}
                 >
-                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
                     <TableSortLabel
                       active={sortConfig.key === store.id}
                       direction={sortConfig.key === store.id ? sortConfig.direction : 'asc'}
                       onClick={createSortHandler(store.id)}
                     >
-                      {cleanStoreName(store.name)}
+                      {getStoreLogo(store.name) ? (
+                        <Box sx={{ width: 120, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Box 
+                            component="img" 
+                            src={getStoreLogo(store.name)!} 
+                            alt={store.name}
+                            sx={{ height: '100%', width: '100%', objectFit: 'contain' }}
+                          />
+                        </Box>
+                      ) : (
+                        cleanStoreName(store.name)
+                      )}
                     </TableSortLabel>
                     
-                    {statusInfo?.isLoading && (
+                    {statusInfo?.isLoading ? (
                       <Tooltip title={statusInfo.status}>
-                        <CircularProgress size={16} sx={{ mt: 0.5 }} />
+                        <CircularProgress size={16} sx={{ my: 0.5 }} />
                       </Tooltip>
-                    )}
-                    
-                    {statusInfo?.isError && (
+                    ) : totalData?.isValid ? (
+                      <Typography 
+                        variant="subtitle2" 
+                        sx={{ 
+                          fontWeight: isCheapest ? 800 : 600,
+                          color: isCheapest ? 'success.main' : 'text.primary',
+                          fontSize: isCheapest ? '1rem' : '0.875rem'
+                        }}
+                      >
+                        ₪{totalData.total}
+                      </Typography>
+                    ) : statusInfo?.isError ? (
                       <Tooltip title={statusInfo.status}>
                         <ErrorOutlineIcon color="error" sx={{ fontSize: 18, mt: 0.5 }} />
                       </Tooltip>
+                    ) : (
+                      <Box sx={{ height: 24 }} /> // Spacer to keep height consistent
                     )}
                   </Box>
                 </TableCell>

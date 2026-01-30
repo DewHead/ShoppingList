@@ -20,7 +20,7 @@ import { API_BASE_URL } from '../config';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { AppContext } from '../AppContext';
-import { calculateSmartTotal, transformToMatrix, sortComparisonMatrix, cleanStoreName } from '../utils/comparisonUtils';
+import { calculateSmartTotal, transformToMatrix, sortComparisonMatrix, cleanStoreName, getStoreLogo } from '../utils/comparisonUtils';
 import ComparisonSummary from '../components/ComparisonSummary';
 import ComparisonTable from '../components/ComparisonTable';
 import './ComparisonPage.css';
@@ -187,6 +187,14 @@ const ComparisonPage = () => {
 
   const activeStores = supermarkets.filter(s => s.is_active);
 
+  const storeTotalsMap = useMemo(() => {
+    const map: Record<number, any> = {};
+    storeTotals.forEach(st => {
+      map[st.id] = st;
+    });
+    return map;
+  }, [storeTotals]);
+
   const matrix = useMemo(() => 
     transformToMatrix(localShoppingListItems, filteredStoreResults), 
     [localShoppingListItems, filteredStoreResults]
@@ -250,6 +258,8 @@ const ComparisonPage = () => {
           onSort={handleSort}
           sortConfig={sortConfig}
           storeStatuses={storeStatuses}
+          storeTotals={storeTotalsMap}
+          minTotal={minTotal}
         />
       </Box>
 
@@ -273,9 +283,19 @@ const ComparisonPage = () => {
           >
             <CloseIcon />
           </IconButton>
-          <Typography variant="h6" component="h2" sx={{ mb: 2, fontWeight: 700 }}>
-            {t('couponsFor')} {cleanStoreName(activeCoupons.storeName)}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+            {getStoreLogo(activeCoupons.storeName) && (
+              <Box 
+                component="img" 
+                src={getStoreLogo(activeCoupons.storeName)!} 
+                alt={activeCoupons.storeName}
+                sx={{ height: 32, width: 'auto', objectFit: 'contain' }}
+              />
+            )}
+            <Typography variant="h6" component="h2" sx={{ fontWeight: 700 }}>
+              {t('couponsFor')} {cleanStoreName(activeCoupons.storeName)}
+            </Typography>
+          </Box>
           <List className="coupon-list">
             {activeCoupons.coupons.map((coupon, index) => (
               <ListItem key={index} sx={{ display: 'block', p: 1.5, mb: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
