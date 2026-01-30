@@ -14,6 +14,7 @@ The user wants to build a Shopping List application with integrated price scrapi
 ## Key Features
 - **Intelligent Web Scraping:** Robust scrapers for major grocery store websites (including Shufersal, Rami Levy, Tiv Taam, and more) to extract current pricing and product data.
 - **Parallel Price Refresh:** True simultaneous scraping across multiple active stores with a concurrency-limited worker pool for maximum efficiency.
+- **Standardized Product Names:** A unified naming engine that normalizes varied store formats into a consistent `[Description] [Weight] [Brand]` structure for clearer comparison.
 - **Cheapest Cart Optimization:** Automatically calculate the most cost-effective store for a given list of items.
 - **Real-time Synchronization:** Use WebSockets to ensure all participants in a shared list see updates instantly.
 
