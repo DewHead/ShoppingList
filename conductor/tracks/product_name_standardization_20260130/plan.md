@@ -2,14 +2,14 @@
 
 This plan outlines the steps to implement a standardization engine at the API layer to normalize product names across all stores into the format: `[Product Description] [Weight/Volume] [Brand]`.
 
-## Phase 1: Core Logic & Unit Normalization
+## Phase 1: Core Logic & Unit Normalization [checkpoint: 38eca5b]
 Focus on building the utility functions that handle string cleaning and unit conversion.
 
 - [x] Task: Create `server/utils/nameStandardizer.js` with basic unit mapping and noise removal regex. bacb44f
 - [x] Task: Write unit tests in `server/tests/nameStandardizer.test.js` for unit normalization (e.g., "גרם" to "ג'"). bacb44f
 - [x] Task: Implement `normalizeUnits` function to pass tests. bacb44f
 - [x] Task: Implement `stripMarketingFluff` function to remove terms like "במבצע", "חדש", etc. bacb44f
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Core Logic' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Core Logic' (Protocol in workflow.md) 38eca5b
 
 ## Phase 2: Brand Extraction & Structural Reordering
 Implement the brand identification logic and the final string assembly.
