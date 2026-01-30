@@ -64,16 +64,17 @@ describe('Name Standardizer - Marketing Fluff Removal', () => {
 describe('Name Standardizer - Batch Product Tests', () => {
     const products = [
         { raw: 'שמן זית כתית מעולה 750 מיל', expected: "שמן זית כתית מעולה 750 מ\"ל" },
-        { raw: 'אורז תאילנדי פרסי 1 קילו שופרסל', expected: 'אורז תאילנדי פרסי 1 ק"ג שופרסל' },
+        { raw: 'שופרסל אורז תאילנדי פרסי 1 קילו', expected: 'אורז תאילנדי פרסי 1 ק"ג שופרסל' },
         { raw: 'מארז 6 יחידות מעדן חלב שטראוס במבצע!', expected: 'מארז 6 יחידות מעדן חלב שטראוס' },
         { raw: 'פסטה ברילה 500 גרם חדש!', expected: "פסטה ברילה 500 ג'" },
         { raw: 'לחם פרוס אחיד (750 גרם)', expected: "לחם פרוס אחיד 750 ג'" },
-        { raw: 'משקה קל תפוזים 1.5 ליטר בלעדי', expected: "משקה קל תפוזים 1.5 ל'" },
-        { raw: 'גבינה צהובה עמק 28% שומן 200 גרם', expected: "גבינה צהובה עמק 28% שומן 200 ג'" }
+        { raw: 'משקה קל תפוזים 1.5 ליטר בלעדי פריגת', expected: "משקה קל תפוזים 1.5 ל' פריגת" },
+        { raw: 'גבינה צהובה עמק 28% שומן 200 גרם תנובה', expected: "גבינה צהובה עמק 28% שומן 200 ג' תנובה" },
+        { raw: 'שטראוס חומוס אחלה 1 קילו', expected: 'חומוס אחלה 1 ק"ג שטראוס' }
     ];
 
     products.forEach(({ raw, expected }) => {
-        it(`should standardize "${raw}" correctly`, () => {
+        it(`should standardize "${raw}" to "${expected}"`, () => {
             expect(standardizeName(raw)).toBe(expected);
         });
     });
