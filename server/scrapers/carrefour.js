@@ -32,6 +32,7 @@ class CarrefourScraper extends BaseScraper {
       }
 
       const { files, branches } = pageData;
+      this.log(`Extracted ${files.length} files and ${Object.keys(branches).length} branches from page data.`);
       
       // Determine target branch ID
       let branchId = '3700'; // Default to Neve Zeev as per previous logs
@@ -66,36 +67,61 @@ class CarrefourScraper extends BaseScraper {
 
       // Filter and sort files for the target branch
       const branchFiles = files.map(f => {
-          // Filename format example: Price7290055700007-2960-202601292300.gz
-          // Format seems to be: [Type][ProviderID]-[BranchID]-[Timestamp].gz
-          // Or sometimes 5 parts? verify regex.
-          // Based on debug HTML: Price7290055700007-2960-202601292300.gz
-          // Type: Price, Provider: 7290055700007, Branch: 2960, TS: 202601292300
+          // Flexible regex to handle different dash counts
+          // Format 1: Type[ID]-[Branch]-[TS].gz
+          // Format 2: Type[ID]-[Chain]-[Branch]-[Date]-[Time].gz
+          const prefixMatch = f.name.match(/^(PriceFull|Price|PromoFull|Promo)\d+/);
+          if (!prefixMatch) return null;
+
+          const typePrefix = prefixMatch[1];
+          const rest = f.name.substring(prefixMatch[0].length + 1).replace('.gz', '');
+          const segments = rest.split('-');
           
-          const match = f.name.match(/^(PriceFull|Price|PromoFull|Promo)\d+-(\d+)-(\d+)\.gz$/);
-          if (match) {
-              return {
-                  url: `https://prices.carrefour.co.il/${match.input.split('-')[2].substring(0, 8)}/${f.name}`, // Construct URL: domain/date/filename
-                  // Wait, the path in script was '20260129'. We should probably grab 'path' variable too or infer it.
-                  // Let's assume the date part of timestamp is the path.
-                  // Timestamp: YYYYMMDDHHMM -> 202601292300 -> date 20260129
-                  
-                  name: f.name,
-                  type: match[1] === 'Price' ? 'PRICE' : match[1] === 'PriceFull' ? 'PRICE_FULL' : match[1] === 'Promo' ? 'PROMO' : 'PROMO_FULL',
-                  branchId: match[2],
-                  timestamp: match[3],
-                  branchName: branches[match[2]] || 'Unknown'
-              };
+          let extractedBranchId = null;
+          let timestamp = null;
+
+          if (segments.length === 2) {
+              // Format: [Branch]-[TS]
+              extractedBranchId = segments[0];
+              timestamp = segments[1];
+          } else if (segments.length >= 3) {
+              // Format: [Chain]-[Branch]-[Date]-[Time] (last two are date/time)
+              // Or sometimes [Branch]-[Date]-[Time]
+              // Heuristic: the last 8-12 digit segment is likely part of timestamp
+              if (segments.length === 4) {
+                  extractedBranchId = segments[1];
+                  timestamp = segments[2] + (segments[3] || '');
+              } else {
+                  extractedBranchId = segments[0];
+                  timestamp = segments[segments.length - 2];
+              }
+          }
+
+          if (extractedBranchId) {
+              // Normalize branch ID (remove leading zeros for matching if needed, but here we match as string)
+              // Actually, branchId 3700 vs 0062. The IDs in the branches object are 3-4 digits.
+              // Let's ensure extractedBranchId is padded or compared robustly.
+              const normalizedExtracted = extractedBranchId.replace(/^0+/, '');
+              const normalizedTarget = branchId.replace(/^0+/, '');
+
+              if (normalizedExtracted === normalizedTarget) {
+                return {
+                    url: '', // Will construct below
+                    name: f.name,
+                    type: typePrefix === 'Price' ? 'PRICE' : typePrefix === 'PriceFull' ? 'PRICE_FULL' : typePrefix === 'Promo' ? 'PROMO' : 'PROMO_FULL',
+                    branchId: extractedBranchId,
+                    timestamp: timestamp,
+                    branchName: branches[extractedBranchId] || 'Unknown'
+                };
+              }
           }
           return null;
-      }).filter(f => f && f.branchId === branchId);
+      }).filter(f => f);
 
-      // Verify URL construction. In HTML: 
-      // path = '20260129';
-      // href="https://prices.carrefour.co.il/20260129/Price..."
-      // So yes, it is https://prices.carrefour.co.il/<DATE_PART>/<FILENAME>
-      
+      this.log(`Filtered down to ${branchFiles.length} files for target branch ${branchId}`);
+
       branchFiles.forEach(f => {
+         // Timestamp format can be YYYYMMDD or YYYYMMDDHHMM
          const datePart = f.timestamp.substring(0, 8);
          f.url = `https://prices.carrefour.co.il/${datePart}/${f.name}`;
       });

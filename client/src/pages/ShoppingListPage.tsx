@@ -36,7 +36,7 @@ import { useTranslation } from '../useTranslation';
 import { API_BASE_URL } from '../config';
 import AddItemFAB from '../components/AddItemFAB';
 import ShoppingListSidePanel from '../components/ShoppingListSidePanel';
-import { calculateBestPrice } from '../utils/comparisonUtils';
+import { calculateBestPrice, cleanStoreName } from '../utils/comparisonUtils';
 import './ShoppingListPage.css';
 
 const socket = io(API_BASE_URL);
@@ -586,7 +586,7 @@ const ShoppingListPage = () => {
                         {cheapestStore ? t('cheapestStore') : t('matchesFor')}
                     </Typography>
                     <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
-                        {cheapestStore ? cheapestStore.name : `${selectedItems.length} items`}
+                        {cheapestStore ? cleanStoreName(cheapestStore.name) : `${selectedItems.length} items`}
                     </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

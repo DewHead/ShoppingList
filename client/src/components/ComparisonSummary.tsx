@@ -2,6 +2,7 @@ import { Paper, Typography, Box, useTheme } from '@mui/material';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import StoreIcon from '@mui/icons-material/Store';
 import { useTranslation } from '../useTranslation';
+import { cleanStoreName } from '../utils/comparisonUtils';
 
 interface ComparisonSummaryProps {
   cheapestStore: {
@@ -44,7 +45,7 @@ export default function ComparisonSummary({ cheapestStore, maxTotal }: Compariso
             {t('cheapestStore')}
           </Typography>
           <Typography variant="h4" sx={{ fontWeight: 900 }}>
-            {cheapestStore.name}
+            {cleanStoreName(cheapestStore.name)}
           </Typography>
         </Box>
       </Box>

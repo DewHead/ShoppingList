@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import { ArrowLeft, AlertCircle, CreditCard, Settings, GripVertical, Search } from 'lucide-react';
 import { AppContext } from '../AppContext';
+import { cleanStoreName } from '../utils/comparisonUtils';
 
 interface SupermarketItem {
   id: number;
@@ -52,6 +53,7 @@ export const ScrapedDataPage: React.FC = () => {
   const [items, setItems] = useState<SupermarketItem[]>([]);
   const [storeName, setStoreName] = useState<string>('');
   const [showOnlyPromos, setShowOnlyPromos] = useState<boolean>(false);
+  const [showClubPromos, setShowClubPromos] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   
   const [page, setPage] = useState(1);
@@ -178,6 +180,7 @@ export const ScrapedDataPage: React.FC = () => {
     url.searchParams.append('page', currentPage.toString());
     url.searchParams.append('onlyPromos', showOnlyPromos.toString());
     url.searchParams.append('showSbox', showCreditCardPromos.toString());
+    url.searchParams.append('showClubPromos', showClubPromos.toString());
     if (search) url.searchParams.append('search', search);
 
     fetch(url.toString())
@@ -198,7 +201,7 @@ export const ScrapedDataPage: React.FC = () => {
         setError(err.message);
         setLoading(false);
       });
-  }, [id, showOnlyPromos, showCreditCardPromos, searchQuery]);
+  }, [id, showOnlyPromos, showCreditCardPromos, showClubPromos, searchQuery]);
 
   // Debounce search
   useEffect(() => {
@@ -208,7 +211,7 @@ export const ScrapedDataPage: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(handler);
-  }, [searchQuery, showOnlyPromos, showCreditCardPromos]);
+  }, [searchQuery, showOnlyPromos, showCreditCardPromos, showClubPromos]);
 
   const loadMore = () => {
     const nextPage = page + 1;
@@ -276,7 +279,7 @@ export const ScrapedDataPage: React.FC = () => {
               {language === 'he' ? <ArrowLeft className="transform rotate-180" /> : <ArrowLeft />}
             </button>
             <h1 className={`text-2xl font-bold ${language === 'he' ? 'mr-4' : 'ml-4'}`}>
-              {t('scrapedDataTitle').replace('%id%', storeName || id || '')}
+              {t('scrapedDataTitle').replace('%id%', cleanStoreName(storeName) || id || '')}
             </h1>
           </div>
 
@@ -285,6 +288,12 @@ export const ScrapedDataPage: React.FC = () => {
                 control={<Switch checked={showOnlyPromos} onChange={(e) => setShowOnlyPromos(e.target.checked)} size="small" />}
                 label={<Typography variant="body2">{t('showOnlyPromos')}</Typography>}
             />
+            {(storeName.includes('קרפור') || storeName.includes('Carrefour')) && (
+            <FormControlLabel
+                control={<Switch checked={showClubPromos} onChange={(e) => setShowClubPromos(e.target.checked)} size="small" />}
+                label={<Typography variant="body2">{t('showClubPromos')}</Typography>}
+            />
+            )}
             {(storeName.includes('שופרסל') || storeName.includes('Shufersal')) && (
             <FormControlLabel
                 control={

@@ -20,7 +20,7 @@ import { API_BASE_URL } from '../config';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { AppContext } from '../AppContext';
-import { calculateSmartTotal, transformToMatrix, sortComparisonMatrix } from '../utils/comparisonUtils';
+import { calculateSmartTotal, transformToMatrix, sortComparisonMatrix, cleanStoreName } from '../utils/comparisonUtils';
 import ComparisonSummary from '../components/ComparisonSummary';
 import ComparisonTable from '../components/ComparisonTable';
 import './ComparisonPage.css';
@@ -274,7 +274,7 @@ const ComparisonPage = () => {
             <CloseIcon />
           </IconButton>
           <Typography variant="h6" component="h2" sx={{ mb: 2, fontWeight: 700 }}>
-            {t('couponsFor')} {activeCoupons.storeName}
+            {t('couponsFor')} {cleanStoreName(activeCoupons.storeName)}
           </Typography>
           <List className="coupon-list">
             {activeCoupons.coupons.map((coupon, index) => (

@@ -92,7 +92,6 @@ const calculateBestPrice = (match, quantity) => {
 async function updateFtsIndex(storeId) {
     try {
         console.log(`Updating FTS index for store ${storeId}...`);
-        await db.run('DELETE FROM items_fts WHERE supermarket_id = ?', [storeId]);
         
         const items = await db.all(`
             SELECT remote_name, remote_id, supermarket_id, price, branch_info 
@@ -101,23 +100,28 @@ async function updateFtsIndex(storeId) {
         `, [storeId]);
         
         if (items.length > 0) {
-            await db.run('BEGIN TRANSACTION');
-            const insert = await db.prepare(`
-                INSERT INTO items_fts (remote_name, remote_id, supermarket_id, price, branch_info)
-                VALUES (?, ?, ?, ?, ?)
-            `);
-            for (const item of items) {
-                await insert.run(item.remote_name, item.remote_id, item.supermarket_id, item.price, item.branch_info);
+            await db.run('BEGIN IMMEDIATE');
+            try {
+                await db.run('DELETE FROM items_fts WHERE supermarket_id = ?', [storeId]);
+                const insert = await db.prepare(`
+                    INSERT INTO items_fts (remote_name, remote_id, supermarket_id, price, branch_info)
+                    VALUES (?, ?, ?, ?, ?)
+                `);
+                for (const item of items) {
+                    await insert.run(item.remote_name, item.remote_id, item.supermarket_id, item.price, item.branch_info);
+                }
+                await insert.finalize();
+                await db.run('COMMIT');
+                console.log(`FTS index updated for store ${storeId} with ${items.length} items.`);
+            } catch (innerErr) {
+                await db.run('ROLLBACK');
+                throw innerErr;
             }
-            await insert.finalize();
-            await db.run('COMMIT');
+        } else {
+            console.log(`No items found for store ${storeId}, skipping FTS update.`);
         }
-        console.log(`FTS index updated for store ${storeId} with ${items.length} items.`);
     } catch (err) {
         console.error(`Error updating FTS index for store ${storeId}:`, err);
-        if (db) {
-            try { await db.run('ROLLBACK'); } catch (e) {}
-        }
     }
 }
 
@@ -152,17 +156,7 @@ async function performSaveDiscoveryResults(storeId, products, promos) {
   try {
     if (products && products.length > 0) {
       console.log(`Directly saving ${products.length} discovered items from store ${storeId}...`);
-      await db.run('DELETE FROM supermarket_items WHERE supermarket_id = ?', [storeId]);
-      await db.run('BEGIN TRANSACTION');
-      const insertItemStmt = await db.prepare('INSERT OR IGNORE INTO items (name) VALUES (?)');
-      const insertSupermarketItemStmt = await db.prepare(`
-        INSERT INTO supermarket_items (
-          supermarket_id, item_id, remote_id, remote_name, branch_info, 
-          price, unit_of_measure, unit_of_measure_price, manufacturer, country, last_updated
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
+      
       const uniqueProducts = new Map();
       for (const item of products) {
         const validation = validateProduct(item);
@@ -174,65 +168,84 @@ async function performSaveDiscoveryResults(storeId, products, promos) {
         }
       }
 
-      for (const item of uniqueProducts.values()) {
-        await insertItemStmt.run(item.remote_name);
-        const itemRow = await db.get('SELECT id FROM items WHERE name = ?', [item.remote_name]);
-        if (itemRow) {
-          await insertSupermarketItemStmt.run(
-            storeId,
-            itemRow.id,
-            item.remote_id,
-            item.remote_name,
-            item.branch_info,
-            item.price,
-            item.unit_of_measure,
-            item.unit_of_measure_price,
-            item.manufacturer,
-            item.country,
-            item.last_updated || new Date().toISOString()
-          );
+      await db.run('BEGIN IMMEDIATE');
+      try {
+        await db.run('DELETE FROM supermarket_items WHERE supermarket_id = ?', [storeId]);
+        const insertItemStmt = await db.prepare('INSERT OR IGNORE INTO items (name) VALUES (?)');
+        const insertSupermarketItemStmt = await db.prepare(`
+            INSERT INTO supermarket_items (
+            supermarket_id, item_id, remote_id, remote_name, branch_info, 
+            price, unit_of_measure, unit_of_measure_price, manufacturer, country, last_updated
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        for (const item of uniqueProducts.values()) {
+            await insertItemStmt.run(item.remote_name);
+            const itemRow = await db.get('SELECT id FROM items WHERE name = ?', [item.remote_name]);
+            if (itemRow) {
+            await insertSupermarketItemStmt.run(
+                storeId,
+                itemRow.id,
+                item.remote_id,
+                item.remote_name,
+                item.branch_info,
+                item.price,
+                item.unit_of_measure,
+                item.unit_of_measure_price,
+                item.manufacturer,
+                item.country,
+                item.last_updated || new Date().toISOString()
+            );
+            }
         }
+        await insertItemStmt.finalize();
+        await insertSupermarketItemStmt.finalize();
+        await db.run('COMMIT');
+        await db.run('UPDATE supermarkets SET last_scrape_time = ? WHERE id = ?', [new Date().toISOString(), storeId]);
+        console.log(`Successfully saved ${uniqueProducts.size} items to supermarket_items for store ${storeId}.`);
+      } catch (innerErr) {
+          await db.run('ROLLBACK');
+          throw innerErr;
       }
-      await insertItemStmt.finalize();
-      await insertSupermarketItemStmt.finalize();
-      await db.run('COMMIT');
-      await db.run('UPDATE supermarkets SET last_scrape_time = ? WHERE id = ?', [new Date().toISOString(), storeId]);
-      console.log(`Successfully saved ${uniqueProducts.size} items to supermarket_items for store ${storeId}.`);
     }
 
     if (promos && promos.length > 0) {
       console.log(`Saving ${promos.length} discovered promos from store ${storeId}...`);
-      await db.run('DELETE FROM supermarket_promos WHERE supermarket_id = ?', [storeId]);
-      await db.run('BEGIN TRANSACTION');
-      const insertPromoStmt = await db.prepare(`
-        INSERT INTO supermarket_promos (supermarket_id, branch_info, remote_id, promo_id, description, last_updated)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-
+      
       const uniquePromos = new Map();
       for (const promo of promos) {
           const key = `${promo.remote_id}_${promo.promo_id}_${promo.branch_info}`;
           uniquePromos.set(key, promo);
       }
 
-      for (const promo of uniquePromos.values()) {
-        await insertPromoStmt.run(
-          storeId,
-          promo.branch_info,
-          promo.remote_id,
-          promo.promo_id,
-          promo.description,
-          promo.last_updated || new Date().toISOString()
-        );
+      await db.run('BEGIN IMMEDIATE');
+      try {
+        await db.run('DELETE FROM supermarket_promos WHERE supermarket_id = ?', [storeId]);
+        const insertPromoStmt = await db.prepare(`
+            INSERT INTO supermarket_promos (supermarket_id, branch_info, remote_id, promo_id, description, last_updated)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `);
+
+        for (const promo of uniquePromos.values()) {
+            await insertPromoStmt.run(
+            storeId,
+            promo.branch_info,
+            promo.remote_id,
+            promo.promo_id,
+            promo.description,
+            promo.last_updated || new Date().toISOString()
+            );
+        }
+        await insertPromoStmt.finalize();
+        await db.run('COMMIT');
+      } catch (innerErr) {
+          await db.run('ROLLBACK');
+          throw innerErr;
       }
-      await insertPromoStmt.finalize();
-      await db.run('COMMIT');
     }
     await updateFtsIndex(storeId);
   } catch (err) {
-    if (db) {
-        try { await db.run('ROLLBACK'); } catch (e) {}
-    }
     console.error('Error saving discovery data:', err.message);
     throw err;
   }
@@ -261,6 +274,7 @@ app.get('/api/supermarkets/:id/items', async (req, res) => {
     branch = 'all', 
     onlyPromos = 'false',
     showSbox = 'false',
+    showClubPromos = 'false',
     search = ''
   } = req.query;
   const offset = (page - 1) * limit;
@@ -333,25 +347,36 @@ app.get('/api/supermarkets/:id/items', async (req, res) => {
     const wrapperQuery = `
       SELECT si.id, 
       GROUP_CONCAT(
-          CASE WHEN ? = 'true' OR sp.description NOT LIKE '%SBOX%' THEN sp.description ELSE NULL END,
+          CASE 
+            WHEN (? = 'true' OR sp.description NOT LIKE '%SBOX%') 
+                 AND (? = 'true' OR sp.description NOT LIKE '%מבצע מועדון%')
+                 AND sp.description != si.remote_name
+            THEN sp.description 
+            ELSE NULL 
+          END,
           ' | '
       ) as promo_description
       ${filteredQuery}
     `;
-    const wrapperParams = [showSbox, ...countParams];
+    const wrapperParams = [showSbox, showClubPromos, ...countParams];
     const finalCountQuery = `SELECT COUNT(*) as total FROM (${wrapperQuery}) ${onlyPromos === 'true' ? 'WHERE promo_description IS NOT NULL' : ''}`;
     const countResult = await db.get(finalCountQuery, wrapperParams);
     const total = countResult ? countResult.total : 0;
 
-    let dataQuery = `
-      SELECT si.*, 
-      GROUP_CONCAT(
-          CASE WHEN ? = 'true' OR sp.description NOT LIKE '%SBOX%' THEN sp.description ELSE NULL END,
-          ' | '
-      ) as promo_description
-      ${filteredQuery}
-    `;
-    if (onlyPromos === 'true') {
+        let dataQuery = `
+          SELECT si.*, 
+          GROUP_CONCAT(
+              CASE 
+                WHEN (? = 'true' OR sp.description NOT LIKE '%SBOX%') 
+                     AND (? = 'true' OR sp.description NOT LIKE '%מבצע מועדון%')
+                     AND sp.description != si.remote_name
+                THEN sp.description 
+                ELSE NULL 
+              END, 
+              ' | '
+          ) as promo_description
+          ${filteredQuery}
+        `;    if (onlyPromos === 'true') {
         dataQuery += ` HAVING promo_description IS NOT NULL`;
     }
     dataQuery += ` 
@@ -364,7 +389,7 @@ app.get('/api/supermarkets/:id/items', async (req, res) => {
         si.remote_name ASC 
       LIMIT ? OFFSET ?
     `;
-    const dataParams = [showSbox, ...countParams, `${search}%`, parseInt(limit), parseInt(offset)];
+    const dataParams = [showSbox, showClubPromos, ...countParams, `${search}%`, parseInt(limit), parseInt(offset)];
     const items = await db.all(dataQuery, dataParams);
     res.json({ items, pagination: { total, page: parseInt(page), limit: parseInt(limit), totalPages: Math.ceil(total / limit) } });
   } catch (err) {
@@ -450,12 +475,21 @@ function getTermVariations(term) {
         ['ק"ג', 'קג', 'קילו', 'קילוגרם', 'kg', 'kilo'],
         ['גרם', 'ג\'', 'g', 'gr', 'gm']
     ];
+    
+    // Meat synonyms: Searching for 'בשר' should match any of these meat indicators
+    const meatTerms = ['בשר', 'בקר', 'עגל', 'כבש', 'כתף', 'צלעות', 'צוואר', 'סינטה', 'פילה', 'שייטל', 'אסאדו', 'אנטריקוט', 'מנתח'];
+
     const lowerTerm = term.toLowerCase();
     for (const group of unitGroups) {
         if (group.includes(lowerTerm)) {
             group.forEach(v => { if (v !== lowerTerm) res.push(v); });
         }
     }
+
+    if (meatTerms.includes(lowerTerm)) {
+        meatTerms.forEach(v => { if (v !== lowerTerm) res.push(v); });
+    }
+
     if (!/[\u0590-\u05FF]/.test(term)) return res;
     if (term.length < 3) return res;
     const end1 = term.slice(-1);
@@ -475,38 +509,48 @@ function getTermVariations(term) {
     return res;
 }
 
+const buildFtsQuery = (terms) => {
+    return terms.map((term) => {
+        const variations = getTermVariations(term);
+        const hebTerm = toHebrew(term);
+        if (hebTerm !== term) variations.push(...getTermVariations(hebTerm));
+        const unique = [...new Set(variations)];
+        const parts = unique.map(v => {
+            const escaped = v.replace(/"/g, '""');
+            if (v.endsWith('%')) return `"${escaped}"`;
+            return `"${escaped}"*`;
+        });
+        return `(${parts.join(' OR ')})`;
+    }).join(' AND ');
+};
+
 // Search all products
 app.post('/api/search-all-products', async (req, res) => {
   const { query } = req.body;
   if (!query || query.length < 2) return res.json([]);
   try {
     const rawTerms = query.trim().split(/\s+/);
-    const buildFtsQuery = (terms) => {
-        return terms.map((term) => {
-            const variations = getTermVariations(term);
-            const hebTerm = toHebrew(term);
-            if (hebTerm !== term) variations.push(...getTermVariations(hebTerm));
-            const unique = [...new Set(variations)];
-            // 4. Build FTS string: "(v1* OR v2* ...)"
-            const parts = unique.map(v => {
-                const escaped = v.replace(/"/g, '""');
-                // If the term ends in '%', treat it as a literal token (no suffix wildcard)
-                if (v.endsWith('%')) return `"${escaped}"`;
-                return `"${escaped}"*`;
-            });
-            return `(${parts.join(' OR ')})`;
-        }).join(' AND ');
-    };
     const ftsQuery = buildFtsQuery(rawTerms);
+    const { showSbox = 'false', showClubPromos = 'false' } = req.query;
+
     const results = await db.all(`
-      SELECT items_fts.supermarket_id, s.name as supermarket_name, items_fts.remote_name, items_fts.price, items_fts.remote_id, GROUP_CONCAT(sp.description, ' | ') as promo_description, items_fts.branch_info
+      SELECT items_fts.supermarket_id, s.name as supermarket_name, items_fts.remote_name, items_fts.price, items_fts.remote_id, GROUP_CONCAT(
+          CASE 
+            WHEN (? = 'true' OR sp.description NOT LIKE '%SBOX%') 
+                 AND (? = 'true' OR sp.description NOT LIKE '%מבצע מועדון%')
+                 AND sp.description != items_fts.remote_name
+            THEN sp.description 
+            ELSE NULL 
+          END, 
+          ' | '
+      ) as promo_description, items_fts.branch_info
       FROM items_fts
       JOIN supermarkets s ON items_fts.supermarket_id = s.id
       LEFT JOIN supermarket_promos sp ON sp.supermarket_id = items_fts.supermarket_id AND sp.remote_id = items_fts.remote_id AND sp.branch_info = items_fts.branch_info
       WHERE items_fts MATCH ? AND s.is_active = 1
       GROUP BY items_fts.supermarket_id, items_fts.remote_id
       LIMIT 100
-    `, [ftsQuery]);
+    `, [showSbox, showClubPromos, ftsQuery]);
     res.json(results);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -514,22 +558,31 @@ app.post('/api/search-all-products', async (req, res) => {
 // Comparison endpoint
 app.get('/api/comparison', async (req, res) => {
   try {
-    const { showSbox = 'false' } = req.query;
+    const { showSbox = 'false', showClubPromos = 'false' } = req.query;
     const activeSupermarkets = await db.all('SELECT id, name FROM supermarkets WHERE is_active = 1');
     const shoppingList = await db.all(`SELECT sl.id as listId, sl.quantity, i.name as itemName, i.id as itemId FROM shopping_list sl JOIN items i ON sl.item_id = i.id`);
     const comparisonResults = {};
 
-    const findBestMatchForStore = async (itemName, storeId, showCreditCardPromos, itemId, quantity) => {
+    const findBestMatchForStore = async (itemName, storeId, showCreditCardPromos, showClubPromos, itemId, quantity) => {
         try {
             const pinned = await db.get(`SELECT remote_id FROM item_matches WHERE shopping_list_item_id = ? AND supermarket_id = ?`, [itemId, storeId]);
             if (pinned) {
                 const pinnedItem = await db.get(`
-                    SELECT si.remote_name, si.price, si.remote_id, GROUP_CONCAT(CASE WHEN ? = 'true' OR sp.description NOT LIKE '%SBOX%' THEN sp.description ELSE NULL END, ' | ') as promo_description
+                    SELECT si.remote_name, si.price, si.remote_id, GROUP_CONCAT(
+                        CASE 
+                            WHEN (? = 'true' OR sp.description NOT LIKE '%SBOX%') 
+                                 AND (? = 'true' OR sp.description NOT LIKE '%מבצע מועדון%')
+                                 AND sp.description != si.remote_name
+                            THEN sp.description 
+                            ELSE NULL 
+                        END, 
+                        ' | '
+                    ) as promo_description
                     FROM supermarket_items si
                     LEFT JOIN supermarket_promos sp ON sp.supermarket_id = si.supermarket_id AND si.remote_id = sp.remote_id AND (sp.branch_info IS NULL OR sp.branch_info = si.branch_info)
                     WHERE si.supermarket_id = ? AND si.remote_id = ?
                     GROUP BY si.remote_id
-                `, [showCreditCardPromos, storeId, pinned.remote_id]);
+                `, [showCreditCardPromos, showClubPromos, storeId, pinned.remote_id]);
                 if (pinnedItem) return { ...pinnedItem, is_pinned: true };
             }
         } catch (e) { console.error("Pin check failed:", e); }
@@ -537,16 +590,25 @@ app.get('/api/comparison', async (req, res) => {
         try {
             const cleanQuery = itemName.replace(/["']/g, '');
             const terms = cleanQuery.trim().split(/\s+/);
-            const ftsQuery = terms.map(t => `"${t}"*`).join(' AND ');
+            const ftsQuery = buildFtsQuery(terms);
             const matches = await db.all(`
-                SELECT items_fts.remote_name, items_fts.price, items_fts.remote_id, GROUP_CONCAT(CASE WHEN ? = 'true' OR sp.description NOT LIKE '%SBOX%' THEN sp.description ELSE NULL END, ' | ') as promo_description
+                SELECT items_fts.remote_name, items_fts.price, items_fts.remote_id, GROUP_CONCAT(
+                    CASE 
+                        WHEN (? = 'true' OR sp.description NOT LIKE '%SBOX%') 
+                             AND (? = 'true' OR sp.description NOT LIKE '%מבצע מועדון%')
+                             AND sp.description != items_fts.remote_name
+                        THEN sp.description 
+                        ELSE NULL 
+                    END, 
+                    ' | '
+                ) as promo_description
                 FROM items_fts
                 LEFT JOIN supermarket_promos sp ON sp.supermarket_id = items_fts.supermarket_id AND sp.remote_id = items_fts.remote_id AND (sp.branch_info IS NULL OR sp.branch_info = items_fts.branch_info)
                 WHERE items_fts.supermarket_id = ? AND items_fts MATCH ?
                 GROUP BY items_fts.remote_id
                 ORDER BY items_fts.rank
                 LIMIT 10
-            `, [showCreditCardPromos, storeId, ftsQuery]);
+            `, [showCreditCardPromos, showClubPromos, storeId, ftsQuery]);
             
             if (matches.length === 0) return null;
             let bestCandidate = null;
@@ -565,7 +627,7 @@ app.get('/api/comparison', async (req, res) => {
     for (const store of activeSupermarkets) {
       const results = [];
       for (const item of shoppingList) {
-          const match = await findBestMatchForStore(item.itemName, store.id, showSbox, item.listId, item.quantity);
+          const match = await findBestMatchForStore(item.itemName, store.id, showSbox, showClubPromos, item.itemId, item.quantity);
           const bestPriceInfo = match ? calculateBestPrice(match, item.quantity) : null;
           results.push({
               item: { itemName: item.itemName, id: item.listId }, 

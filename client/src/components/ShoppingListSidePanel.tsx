@@ -15,7 +15,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { ExpandMore, ExpandLess, PushPin, PushPinOutlined } from '@mui/icons-material';
 import { AlertCircle } from 'lucide-react';
 import { useTranslation } from '../useTranslation';
-import { calculateBestPrice } from '../utils/comparisonUtils';
+import { calculateBestPrice, cleanStoreName } from '../utils/comparisonUtils';
 
 interface SearchResult {
   supermarket_id: number;
@@ -192,7 +192,7 @@ export default function ShoppingListSidePanel({
                                 <Box key={storeName} sx={{ borderBottom: '1px solid', borderColor: 'divider', '&:last-child': { borderBottom: 'none' } }}>
                                     <Box onClick={() => toggleStore(storeName)} sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', p: 1.5, '&:hover': { bgcolor: 'action.hover' } }}>
                                         <IconButton size="small" sx={{ p: 0, mr: 1 }}>{isExpanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}</IconButton>
-                                        <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>{storeName}</Typography>
+                                        <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>{cleanStoreName(storeName)}</Typography>
                                     </Box>
                                     {!isExpanded && (
                                         <Box sx={{ pl: 1, pr: 1, pb: 1 }}>
@@ -229,7 +229,7 @@ export default function ShoppingListSidePanel({
               <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box>
                   <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: '0.1em' }}>{t('cheapestStore')}</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, mt: 0.5 }}>{cheapestStore.name}</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 700, mt: 0.5 }}>{cleanStoreName(cheapestStore.name)}</Typography>
                   {cheapestStore.missing > 0 && <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>* {cheapestStore.missing} items missing</Typography>}
                 </Box>
                 <Typography variant="h4" color="primary.main" sx={{ fontWeight: 800 }}>₪{cheapestStore.total}</Typography>

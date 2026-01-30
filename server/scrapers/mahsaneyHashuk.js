@@ -34,7 +34,7 @@ class MahsaneyHashukScraper extends BaseScraper {
       }
 
       // 3. Branch
-      await this.marketBase.selectOption(page, 'branch', 'בית אשל'); 
+      await this.marketBase.selectOption(page, 'branch', 'אינטרנט'); 
       await randomDelay(3000, 5000);
 
       // 4. Type
@@ -57,24 +57,17 @@ class MahsaneyHashukScraper extends BaseScraper {
       const fileLinks = await this.marketBase.getFileLinks(page);
       this.log(`Mahsaney Hashuk: Found ${fileLinks.length} files.`);
 
-      const latestPriceFull = fileLinks.find(f => f.type === 'PRICE_FULL');
-      const latestPromoFull = fileLinks.find(f => f.type === 'PROMO_FULL');
-      const filesToProcess = [latestPriceFull, latestPromoFull].filter(f => f);
-      
-      if (filesToProcess.length === 0 && fileLinks.length > 0) {
-          const p = fileLinks.find(f => f.type === 'PRICE');
-          if (p) filesToProcess.push(p);
-          const pr = fileLinks.find(f => f.type === 'PROMO');
-          if (pr) filesToProcess.push(pr);
-      }
+      const filesToProcess = fileLinks.filter(f => 
+          ['PRICE_FULL', 'PRICE', 'PROMO_FULL', 'PROMO'].includes(f.type)
+      );
 
       const cookies = await page.context().cookies();
       const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
 
       for (const file of filesToProcess) {
-          this.emitStatus(`Downloading ${file.type}...`);
+          this.emitStatus(`Downloading ${file.type} (${file.name})...`);
           try {
-              const results = await this.marketBase.processFile(file.url, file.type, cookieHeader, 'ב"ש-בית אשל');
+              const results = await this.marketBase.processFile(file.url, file.type, cookieHeader, 'מחסני השוק אינטרנט');
               if (file.type.includes('PRICE')) {
                   allDiscoveredProducts.push(...results);
               } else {

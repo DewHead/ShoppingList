@@ -222,3 +222,7 @@ export const sortComparisonMatrix = (
   });
 };
 
+export const cleanStoreName = (name: string): string => {
+  return name.replace(/\s*\(.*?\)/g, '').trim();
+};
+

@@ -1,0 +1,8 @@
+{
+  "track_id": "keshet_teamim_scraper_20250514",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2025-05-14T12:00:00Z",
+  "updated_at": "2025-05-14T12:00:00Z",
+  "description": "create scraper for keshet teamim. same flow as rami levi and yohananof but with different username. the username is Keshet. no password needed."
+}

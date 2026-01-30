@@ -27,6 +27,7 @@ import { io } from 'socket.io-client';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { AppContext } from '../AppContext';
+import { cleanStoreName } from '../utils/comparisonUtils';
 import './SettingsPage.css';
 import SettingsCard from '../components/SettingsCard';
 
@@ -176,7 +177,7 @@ const SettingsPage = () => {
                                 noWrap
                                 sx={{ fontWeight: 600, fontSize: '1.1rem', opacity: s.is_active ? 1 : 0.6 }}
                             >
-                                {s.name}
+                                {cleanStoreName(s.name)}
                             </Typography>
                             <Typography variant="caption" color="text.secondary" sx={{ opacity: s.is_active ? 0.7 : 0.4 }}>
                                 {scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' ? (

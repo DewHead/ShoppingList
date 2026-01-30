@@ -41,7 +41,8 @@ class MarketBaseScraper {
      * Extract file links from the results table.
      */
     async getFileLinks(page) {
-        return await page.$$eval('table tr', (rows) => {
+        this.scraper.log('Extracting file links from table...');
+        const links = await page.$$eval('table tr', (rows) => {
             const links = [];
             rows.forEach(row => {
                 const link = row.querySelector('a');
@@ -60,6 +61,13 @@ class MarketBaseScraper {
             });
             return links;
         });
+        
+        if (links.length === 0) {
+            this.scraper.log('WARNING: No transparency files found in the results table for the selected filters.');
+        } else {
+            this.scraper.log(`Extracted ${links.length} potential files.`);
+        }
+        return links;
     }
 
     /**

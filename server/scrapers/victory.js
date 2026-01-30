@@ -16,23 +16,23 @@ class VictoryScraper extends BaseScraper {
     const allDiscoveredPromos = [];
 
     try {
+      this.log(`Victory: Navigating to ${url}`);
       await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
 
-      this.emitStatus('Setting filters for Victory...');
-
+      this.emitStatus('Setting filters...');
+      
       // 1. Chain
-      let chainSuccess = await this.marketBase.selectOption(page, 'chain', 'ויקטורי');
-      await randomDelay(3000, 5000);
+      await this.marketBase.selectOption(page, 'chain', 'ויקטורי');
+      await randomDelay(2000, 3000);
 
       // 2. SubChain
-      if (chainSuccess) {
-          await this.marketBase.selectOption(page, 'subChain', 'ויקטורי');
-          await randomDelay(3000, 5000);
-      }
+      await this.marketBase.selectOption(page, 'subChain', 'ויקטורי');
+      await randomDelay(2000, 3000);
 
-      // 3. Branch - Victory Branch 68
-      await this.marketBase.selectOption(page, 'branch', '68'); 
-      await randomDelay(3000, 5000);
+      // 3. Branch
+      // Use branch ID or name from database if available, else default
+      await this.marketBase.selectOption(page, 'branch', 'אינטרנט'); 
+      await randomDelay(2000, 3000);
 
       // 4. Type
       await this.marketBase.selectOption(page, 'fileType', 'הכל');
@@ -42,12 +42,10 @@ class VictoryScraper extends BaseScraper {
       const searchBtn = 'input[name*="btnSearch"]';
       if (await page.$(searchBtn)) {
           await page.click(searchBtn);
-      } else {
-          console.error('Search button not found');
       }
       
       try {
-          await page.waitForSelector('table tr', { timeout: 60000 });
+          await page.waitForSelector('table tr', { timeout: 30000 });
       } catch(e) { this.log('Results table not found (timeout)'); }
       await randomDelay(2000, 3000);
 
@@ -57,7 +55,7 @@ class VictoryScraper extends BaseScraper {
       const latestPriceFull = fileLinks.find(f => f.type === 'PRICE_FULL');
       const latestPromoFull = fileLinks.find(f => f.type === 'PROMO_FULL');
       const filesToProcess = [latestPriceFull, latestPromoFull].filter(f => f);
-      
+
       if (filesToProcess.length === 0 && fileLinks.length > 0) {
           const p = fileLinks.find(f => f.type === 'PRICE');
           if (p) filesToProcess.push(p);
@@ -71,7 +69,7 @@ class VictoryScraper extends BaseScraper {
       for (const file of filesToProcess) {
           this.emitStatus(`Downloading ${file.type}...`);
           try {
-              const results = await this.marketBase.processFile(file.url, file.type, cookieHeader, 'Branch 68');
+              const results = await this.marketBase.processFile(file.url, file.type, cookieHeader, 'ויקטורי אינטרנט');
               if (file.type.includes('PRICE')) {
                   allDiscoveredProducts.push(...results);
               } else {

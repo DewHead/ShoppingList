@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import type { ComparisonMatrixRow } from '../utils/comparisonUtils';
+import { cleanStoreName } from '../utils/comparisonUtils';
 import PriceCell from './PriceCell';
 import { useTranslation } from '../useTranslation';
 
@@ -103,7 +104,7 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
                       direction={sortConfig.key === store.id ? sortConfig.direction : 'asc'}
                       onClick={createSortHandler(store.id)}
                     >
-                      {store.name}
+                      {cleanStoreName(store.name)}
                     </TableSortLabel>
                     
                     {statusInfo?.isLoading && (
