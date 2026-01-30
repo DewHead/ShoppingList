@@ -415,8 +415,9 @@ const ShoppingListPage = () => {
           </Box>
           <Paper sx={{ overflow: 'hidden' }}>
             <Virtuoso
-              style={{ height: '400px' }}
+              useWindowScroll
               data={items}
+              totalCount={items.length}
               itemContent={(index, item) => {
                 const isSelected = selectedItemIds.includes(item.id);
                 const isDone = !!item.is_done;
