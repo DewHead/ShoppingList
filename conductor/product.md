@@ -8,11 +8,11 @@ The user wants to build a Shopping List application with integrated price scrapi
 - **Power users:** Individuals who want to automate their grocery list management and optimize their shopping trips.
 
 ## Core Goals
-- **Real-time Price Comparison:** Provide up-to-date price data from various online grocery retailers (e.g., Shufersal) to enable informed purchasing decisions.
+- **Real-time Price Comparison:** Provide up-to-date price data from various online grocery retailers (e.g., Shufersal, Tiv Taam) to enable informed purchasing decisions.
 - **Collaborative Experience:** Offer a seamless shopping list that synchronizes across devices and users in real-time.
 
 ## Key Features
-- **Intelligent Web Scraping:** Robust scrapers for major grocery store websites to extract current pricing and product data.
+- **Intelligent Web Scraping:** Robust scrapers for major grocery store websites (including Shufersal, Rami Levy, Tiv Taam, and more) to extract current pricing and product data.
 - **Parallel Price Refresh:** True simultaneous scraping across multiple active stores with a concurrency-limited worker pool for maximum efficiency.
 - **Cheapest Cart Optimization:** Automatically calculate the most cost-effective store for a given list of items.
 - **Real-time Synchronization:** Use WebSockets to ensure all participants in a shared list see updates instantly.
