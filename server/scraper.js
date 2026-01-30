@@ -28,6 +28,8 @@ async function scrapeStore(supermarket, items, io, onResults) {
 
     if (url.includes('shufersal')) {
       scraper = new ShufersalScraper(supermarket, io);
+    } else if (name.includes('טיב טעם')) {
+      scraper = new TivTaamScraper(supermarket, io);
     } else if (name.includes('יוחננוף')) {
       scraper = new YohananofScraper(supermarket, io);
     } else if (name.includes('קשת טעמים')) {
@@ -40,8 +42,6 @@ async function scrapeStore(supermarket, items, io, onResults) {
       scraper = new MahsaneyHashukScraper(supermarket, io);
     } else if (url.includes('carrefour')) {
       scraper = new CarrefourScraper(supermarket, io);
-    } else if (name.includes('טיב טעם')) {
-      scraper = new TivTaamScraper(supermarket, io);
     }
 
     if (scraper) {
