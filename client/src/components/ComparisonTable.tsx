@@ -190,14 +190,16 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
               {activeStores.map((store) => {
                 const statusInfo = getStoreStatus(store.id);
                 return (
-                  <TableCell key={store.id} align="center" padding="none">
-                    {statusInfo?.isLoading ? (
-                      <Box sx={{ display: 'flex', justifyContent: 'center', p: 1 }}>
-                        <CircularProgress size={20} color="inherit" sx={{ opacity: 0.3 }} />
-                      </Box>
-                    ) : (
-                      <PriceCell priceInfo={row.prices[store.id]} />
-                    )}
+                  <TableCell 
+                    key={store.id} 
+                    align="center" 
+                    padding="none"
+                    sx={{ 
+                      opacity: statusInfo?.isLoading ? 0.5 : 1,
+                      transition: 'opacity 0.3s ease'
+                    }}
+                  >
+                    <PriceCell priceInfo={row.prices[store.id]} />
                   </TableCell>
                 );
               })}

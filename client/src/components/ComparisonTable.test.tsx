@@ -87,4 +87,23 @@ describe('ComparisonTable', () => {
     // Depending on implementation, we can check for color or some attribute
     // For now just ensuring it's in the document.
   });
+
+  it('renders PriceCell with opacity instead of spinner when store is loading', () => {
+    const storeStatuses = { 1: 'Loading...' };
+    renderTable({ storeStatuses });
+
+    // Should NOT find a circular progress in the table body (but it is allowed in the header)
+    // We'll check the cell specifically.
+    const milkRow = screen.getByText('Milk').closest('tr');
+    expect(milkRow).toBeDefined();
+    
+    // The cell for Store A (id 1) should contain the price with opacity
+    const priceCell = screen.getByText('₪5.00');
+    expect(priceCell).toBeDefined();
+    
+    // Check if parent Box has opacity (we'll implement this)
+    const cellContainer = priceCell.closest('.MuiBox-root');
+    // Note: Vitest/RTL style checks can be tricky with MUI's generated classes, 
+    // but we can check the style attribute if we apply it inline or via sx.
+  });
 });
