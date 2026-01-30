@@ -20,10 +20,10 @@ Implement the brand identification logic and the final string assembly.
 - [x] Task: Implement the main `standardizeName` function that coordinates extraction, cleaning, and reordering. 7c3d31d
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Brand & Structure' (Protocol in workflow.md) 7b71973
 
-## Phase 3: API Integration
+## Phase 3: API Integration [checkpoint: e6eaae7]
 Integrate the standardizer into the backend routes.
 
 - [x] Task: Identify all API endpoints returning product data (e.g., comparison results, search results). 7377114
 - [x] Task: Apply `standardizeName` to the product objects before sending the JSON response. 7c3d31d
 - [x] Task: Verify that frontend components (ComparisonTable, ShoppingListPage) display the standardized names correctly. 7b71973
-- [~] Task: Conductor - User Manual Verification 'Phase 3: API Integration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: API Integration' (Protocol in workflow.md) e6eaae7
