@@ -11,6 +11,34 @@ vi.mock('../useTranslation', () => ({
 
 const theme = createTheme();
 
+vi.mock('react-virtuoso', () => ({
+  TableVirtuoso: vi.fn(({ data, itemContent, components, fixedHeaderContent }) => {
+    const TableComponent = components?.Table || 'table';
+    const TableBodyComponent = components?.TableBody || 'tbody';
+    const TableRowComponent = components?.TableRow || 'tr';
+    const TableHeadComponent = components?.TableHead || 'thead';
+    
+    return (
+      <TableComponent data-testid="mock-virtuoso">
+        <TableHeadComponent>
+          {fixedHeaderContent && fixedHeaderContent()}
+        </TableHeadComponent>
+        <TableBodyComponent>
+          {data.length > 0 ? data.map((item: any, index: number) => (
+             <TableRowComponent key={index} data-testid="virtuoso-item">
+                {itemContent(index, item)}
+             </TableRowComponent>
+          )) : (
+            <tr data-testid="no-data-row">
+                <td colSpan={100}>noData</td>
+            </tr>
+          )}
+        </TableBodyComponent>
+      </TableComponent>
+    );
+  }),
+}));
+
 describe('ComparisonTable', () => {
   const mockData: ComparisonMatrixRow[] = [
     {
@@ -105,5 +133,20 @@ describe('ComparisonTable', () => {
     const cellContainer = priceCell.closest('.MuiBox-root');
     // Note: Vitest/RTL style checks can be tricky with MUI's generated classes, 
     // but we can check the style attribute if we apply it inline or via sx.
+  });
+
+  it('virtualizes the table when many items are present', () => {
+    const manyRows: ComparisonMatrixRow[] = Array.from({ length: 100 }, (_, i) => ({
+      productName: `Product ${i}`,
+      prices: {
+        1: { price: i, displayPrice: `₪${i}.00`, isCheapest: true, status: 'available' }
+      }
+    }));
+
+    renderTable({ data: manyRows });
+
+    expect(screen.getByTestId('mock-virtuoso')).toBeInTheDocument();
+    const rows = screen.getAllByTestId('virtuoso-item');
+    expect(rows.length).toBe(100);
   });
 });
