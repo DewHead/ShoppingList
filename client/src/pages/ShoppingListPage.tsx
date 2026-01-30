@@ -31,6 +31,7 @@ import {
 } from 'react-swipeable-list';
 import 'react-swipeable-list/dist/styles.css';
 import axios from 'axios';
+import { Virtuoso } from 'react-virtuoso';
 import { io } from 'socket.io-client';
 import { useTranslation } from '../useTranslation';
 import { API_BASE_URL } from '../config';
@@ -413,8 +414,10 @@ const ShoppingListPage = () => {
             </Box>
           </Box>
           <Paper sx={{ overflow: 'hidden' }}>
-            <SwipeableList fullSwipe={false} type={SwipeType.IOS}>
-              {items.map((item, index) => {
+            <Virtuoso
+              style={{ height: '400px' }}
+              data={items}
+              itemContent={(index, item) => {
                 const isSelected = selectedItemIds.includes(item.id);
                 const isDone = !!item.is_done;
                 
@@ -456,77 +459,79 @@ const ShoppingListPage = () => {
                 );
 
                 return (
-                  <SwipeableListItem
-                    key={item.id}
-                    leadingActions={leadingActions()}
-                    trailingActions={trailingActions()}
-                  >
-                    <ListItem 
-                      divider={index < items.length - 1} 
-                      onClick={() => handleItemClick(item)} 
-                      sx={{ 
-                          px: 2, 
-                          py: 1.5, 
-                          cursor: 'pointer',
-                          bgcolor: isSelected ? 'action.selected' : 'background.paper',
-                          '&:hover': { bgcolor: isSelected ? 'action.selected' : 'action.hover' },
-                          width: '100%',
-                          opacity: isDone ? 0.6 : 1,
-                          transition: 'opacity 0.2s'
-                      }}
+                  <SwipeableList fullSwipe={false} type={SwipeType.IOS}>
+                    <SwipeableListItem
+                      key={item.id}
+                      leadingActions={leadingActions()}
+                      trailingActions={trailingActions()}
                     >
-                    {editingId === item.id ? (
-                        <TextField
-                          size="small"
-                          value={editingName}
-                          onChange={(e) => setEditingName(e.target.value)}
-                          onKeyDown={(e) => {
-                              if (e.key === 'Enter') updateItemName(item.id, editingName);
-                              if (e.key === 'Escape') setEditingId(null);
-                          }}
-                          autoFocus
-                          onClick={(e) => e.stopPropagation()}
-                          sx={{ flexGrow: 1, mr: 2 }}
-                          inputProps={{ style: { fontWeight: 600 } }}
-                        />
-                    ) : (
-                      <ListItemText 
-                        primary={item.itemName} 
-                        primaryTypographyProps={{ 
-                          fontWeight: 600,
-                          sx: { textDecoration: isDone ? 'line-through' : 'none' }
-                        }} 
-                        sx={{ m: 0 }} 
-                      />
-                    )}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
-                      <TextField type="number" value={item.quantity} onChange={(e) => updateItemQuantity(item.id, Number(e.target.value))} onClick={(e) => e.stopPropagation()} sx={{ width: '60px' }} size="small" inputProps={{ min: 1, style: { padding: '4px 8px', textAlign: 'center' } }} />
-                      {editingId === item.id ? (
-                          <IconButton size="small" onClick={(e) => { e.stopPropagation(); updateItemName(item.id, editingName); }} color="primary">
-                              <SaveIcon fontSize="small" />
-                          </IconButton>
-                      ) : (
-                          <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEditingId(item.id); setEditingName(item.itemName); }} sx={{ color: 'text.secondary' }}>
-                              <EditIcon fontSize="small" />
-                          </IconButton>
-                      )}
-                      <IconButton 
-                        size="small" 
-                        onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} 
+                      <ListItem 
+                        divider={index < items.length - 1} 
+                        onClick={() => handleItemClick(item)} 
                         sx={{ 
-                          color: 'text.secondary', 
-                          '&:hover': { color: 'error.main' },
-                          display: { xs: 'none', sm: 'inline-flex' } // Hide delete icon on mobile, use swipe instead
+                            px: 2, 
+                            py: 1.5, 
+                            cursor: 'pointer',
+                            bgcolor: isSelected ? 'action.selected' : 'background.paper',
+                            '&:hover': { bgcolor: isSelected ? 'action.selected' : 'action.hover' },
+                            width: '100%',
+                            opacity: isDone ? 0.6 : 1,
+                            transition: 'opacity 0.2s'
                         }}
                       >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </ListItem>
-                </SwipeableListItem>
+                      {editingId === item.id ? (
+                          <TextField
+                            size="small"
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') updateItemName(item.id, editingName);
+                                if (e.key === 'Escape') setEditingId(null);
+                            }}
+                            autoFocus
+                            onClick={(e) => e.stopPropagation()}
+                            sx={{ flexGrow: 1, mr: 2 }}
+                            inputProps={{ style: { fontWeight: 600 } }}
+                          />
+                      ) : (
+                        <ListItemText 
+                          primary={item.itemName} 
+                          primaryTypographyProps={{ 
+                            fontWeight: 600,
+                            sx: { textDecoration: isDone ? 'line-through' : 'none' }
+                          }} 
+                          sx={{ m: 0 }} 
+                        />
+                      )}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
+                        <TextField type="number" value={item.quantity} onChange={(e) => updateItemQuantity(item.id, Number(e.target.value))} onClick={(e) => e.stopPropagation()} sx={{ width: '60px' }} size="small" inputProps={{ min: 1, style: { padding: '4px 8px', textAlign: 'center' } }} />
+                        {editingId === item.id ? (
+                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); updateItemName(item.id, editingName); }} color="primary">
+                                <SaveIcon fontSize="small" />
+                            </IconButton>
+                        ) : (
+                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEditingId(item.id); setEditingName(item.itemName); }} sx={{ color: 'text.secondary' }}>
+                                <EditIcon fontSize="small" />
+                            </IconButton>
+                        )}
+                        <IconButton 
+                          size="small" 
+                          onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} 
+                          sx={{ 
+                            color: 'text.secondary', 
+                            '&:hover': { color: 'error.main' },
+                            display: { xs: 'none', sm: 'inline-flex' } // Hide delete icon on mobile, use swipe instead
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </ListItem>
+                  </SwipeableListItem>
+                </SwipeableList>
                 );
-              })}
-            </SwipeableList>
+              }}
+            />
             {items.length === 0 && <Box sx={{ p: 4, textAlign: 'center' }}><Typography color="text.secondary">{t('emptyList')}</Typography></Box>}
           </Paper>
         </Box>

@@ -6,8 +6,8 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Infrastructure & Asset Optimization' (Protocol in workflow.md)
 
 ## Phase 2: Frontend List Performance
-- [~] Task: Virtualize Shopping List
-- [ ] Task: Virtualize Comparison Table
+- [x] Task: Virtualize Shopping List a3076cb
+- [~] Task: Virtualize Comparison Table
     - [ ] Write failing tests for `ComparisonTable.tsx` focusing on horizontal and vertical scrolling performance.
     - [ ] Implement virtualization for the grid of prices.
     - [ ] Ensure that "cheapest" highlighting and sticky headers/columns still function correctly.

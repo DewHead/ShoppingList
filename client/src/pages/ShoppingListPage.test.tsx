@@ -14,6 +14,18 @@ vi.mock('socket.io-client', () => ({
   }),
 }));
 
+vi.mock('react-virtuoso', () => ({
+  Virtuoso: vi.fn(({ data, itemContent }) => (
+    <div data-testid="mock-virtuoso">
+      {data.map((item: any, index: number) => (
+        <div key={item.id} data-testid="virtuoso-item">
+          {itemContent(index, item)}
+        </div>
+      ))}
+    </div>
+  )),
+}));
+
 const mockItems = [
   { id: 1, itemName: 'Milk', quantity: 2, itemId: 101, is_done: 0 }
 ];
@@ -114,5 +126,32 @@ describe('ShoppingListPage', () => {
       const sidePanelCard = cheapestStoreHeader.closest('.MuiPaper-root');
       
       expect(sidePanelCard).toHaveClass('MuiPaper-outlined');
+  });
+
+  it('virtualizes the list when many items are present', async () => {
+    const hundredItems = Array.from({ length: 100 }, (_, i) => ({
+      id: i,
+      itemName: `Item ${i}`,
+      quantity: 1,
+      itemId: 1000 + i,
+      is_done: 0
+    }));
+
+    mockedAxios.get.mockImplementation((url) => {
+      if (url.includes('/api/shopping-list')) return Promise.resolve({ data: hundredItems });
+      if (url.includes('/api/supermarkets')) return Promise.resolve({ data: mockSupermarkets });
+      if (url.includes('/api/comparison')) return Promise.resolve({ data: {} });
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithContext(<ShoppingListPage />);
+
+    // Verify Virtuoso is used
+    const virtuoso = await screen.findByTestId('mock-virtuoso');
+    expect(virtuoso).toBeInTheDocument();
+
+    // In our mock, we can verify it received all 100 items.
+    const items = screen.getAllByTestId('virtuoso-item');
+    expect(items.length).toBe(100);
   });
 });
