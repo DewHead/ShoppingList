@@ -4,7 +4,7 @@ const fs = require('fs');
 const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 
-const TEST_DB = path.join(__dirname, 'test_database.sqlite');
+const TEST_DB = path.join(__dirname, '..', 'test_database.sqlite');
 
 describe('Database Setup and Seeding', () => {
     let db;
@@ -28,11 +28,14 @@ describe('Database Setup and Seeding', () => {
     it('should NOT contain Tayo and SHOULD contain Tiv Taam after initialization', async () => {
         db = await initDb('test_database.sqlite');
         
-        const supermarkets = await db.all('SELECT name FROM supermarkets');
+        const supermarkets = await db.all('SELECT name, branch_remote_id FROM supermarkets');
         const names = supermarkets.map(s => s.name);
 
         expect(names).not.toContain('טאיו (חיים יחיל)');
         expect(names).toContain('טיב טעם');
+
+        const tivTaam = supermarkets.find(s => s.name === 'טיב טעם');
+        expect(tivTaam.branch_remote_id).toBe('515');
     });
 
     it('should remove existing Tayo entry during migration', async () => {

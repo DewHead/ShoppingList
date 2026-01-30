@@ -12,6 +12,6 @@
 - [x] Task: [TDD] Implement file discovery and processing logic for Store ID `515`. aef57ff
 - [x] Task: Conductor - User Manual Verification 'Scraper Implementation' (Protocol in workflow.md) fd18cf8
 
-## Phase 3: Integration and E2E Verification
-- [~] Task: Run a full scrape for Tiv Taam and verify data persistence in the database.
-- [ ] Task: Conductor - User Manual Verification 'Integration and E2E Verification' (Protocol in workflow.md)
+## Phase 3: Integration and E2E Verification [checkpoint: 0d82c12]
+- [x] Task: Run a full scrape for Tiv Taam and verify data persistence in the database. 0d82c12
+- [x] Task: Conductor - User Manual Verification 'Integration and E2E Verification' (Protocol in workflow.md) 0d82c12

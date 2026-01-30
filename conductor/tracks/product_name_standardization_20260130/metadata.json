@@ -1,0 +1,8 @@
+{
+  "track_id": "product_name_standardization_20260130",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-01-30T10:00:00Z",
+  "updated_at": "2026-01-30T10:00:00Z",
+  "description": "since each store has different formatting for their product names, i want to standardize the product names format accros all stores."
+}
