@@ -14,16 +14,12 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Frontend List Performance' (Protocol in workflow.md)
 
 ## Phase 3: Backend & Scraper Efficiency
-- [x] Task: Implement Scraper Cache (TTL) 44028d1
-- [~] Task: Optimize Worker Pool Concurrency
-    - [ ] Write tests to simulate high-load scraping and verify the worker pool respects limits.
-    - [ ] Refactor the scraping queue in `server/index.js` or `server/scraper.js` for better resource utilization.
+- [x] Task: Implement Scraper Cache (TTL) 9893fd6
+- [x] Task: Optimize Worker Pool Concurrency 9893fd6
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Backend & Scraper Efficiency' (Protocol in workflow.md)
 
 ## Phase 4: Final Verification & Stability
-- [ ] Task: Cumulative Layout Shift (CLS) Audit
-    - [ ] Verify that asynchronously arriving price updates via WebSockets do not cause layout jumps.
-    - [ ] Add skeleton loaders or fixed-size containers where necessary.
+- [~] Task: Cumulative Layout Shift (CLS) Audit
 - [ ] Task: Performance Benchmarking
     - [ ] Run Lighthouse in a production-like build.
     - [ ] Document final performance metrics (TTI, Speed Index).

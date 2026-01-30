@@ -12,18 +12,46 @@ const TivTaamScraper = require('./scrapers/tivTaam');
 chromium.use(stealth);
 
 const SCRAPE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
+const CONCURRENCY_LIMIT = 3;
 
-async function scrapeStore(supermarket, items, io, onResults) {
-  // Cache check
-  if (supermarket.last_scrape_time) {
-    const lastScrape = new Date(supermarket.last_scrape_time).getTime();
-    if (Date.now() - lastScrape < SCRAPE_TTL) {
-      console.log(`[Cache] Skipping scrape for ${supermarket.name} (last scrape was ${Math.round((Date.now() - lastScrape) / 60000)} mins ago)`);
-      io.emit('storeStatus', { storeId: supermarket.id, status: 'Done (Skipping - Recently updated)' });
-      return;
-    }
+let activeWorkers = 0;
+const scrapeQueue = [];
+
+async function processQueue() {
+  if (activeWorkers >= CONCURRENCY_LIMIT || scrapeQueue.length === 0) return;
+
+  activeWorkers++;
+  const { supermarket, items, io, onResults, resolve, reject } = scrapeQueue.shift();
+
+  try {
+    await performScrape(supermarket, items, io, onResults);
+    resolve();
+  } catch (err) {
+    reject(err);
+  } finally {
+    activeWorkers--;
+    processQueue();
   }
+}
 
+function scrapeStore(supermarket, items, io, onResults) {
+  return new Promise((resolve, reject) => {
+    // Cache check
+    if (supermarket.last_scrape_time) {
+      const lastScrape = new Date(supermarket.last_scrape_time).getTime();
+      if (Date.now() - lastScrape < SCRAPE_TTL) {
+        console.log(`[Cache] Skipping scrape for ${supermarket.name} (last scrape was ${Math.round((Date.now() - lastScrape) / 60000)} mins ago)`);
+        io.emit('storeStatus', { storeId: supermarket.id, status: 'Done (Skipping - Recently updated)' });
+        return resolve();
+      }
+    }
+
+    scrapeQueue.push({ supermarket, items, io, onResults, resolve, reject });
+    processQueue();
+  });
+}
+
+async function performScrape(supermarket, items, io, onResults) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -88,4 +116,8 @@ async function scrapeStore(supermarket, items, io, onResults) {
   }
 }
 
-module.exports = { scrapeStore };
+function getActiveWorkerCount() {
+  return activeWorkers;
+}
+
+module.exports = { scrapeStore, getActiveWorkerCount };
