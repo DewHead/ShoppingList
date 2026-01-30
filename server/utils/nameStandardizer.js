@@ -3,14 +3,18 @@ const UNIT_MAPPINGS = {
     'גר': "ג'",
     'קילוגרם': 'ק"ג',
     'קילו': 'ק"ג',
-    'מיל': 'מ"ל'
+    'מיל': 'מ"ל',
+    'ליטר': "ל'"
 };
 
 const MARKETING_FLUFF = [
     'במבצע',
     'חדש',
     'בלעדי',
-    'מבצע!'
+    'מבצע!',
+    '!',
+    '(',
+    ')'
 ];
 
 /**
@@ -22,25 +26,24 @@ function normalizeUnits(name) {
     let normalized = name;
     for (const [key, value] of Object.entries(UNIT_MAPPINGS)) {
         // Use a regex that looks for the key surrounded by non-Hebrew characters or start/end of string
-        // This avoids \b which doesn't work for Hebrew in standard JS regex
         const regex = new RegExp(`(^|[^א-ת])${key}([^א-ת]|$)`, 'g');
         normalized = normalized.replace(regex, `$1${value}$2`);
-        // Run it twice to handle overlapping matches if necessary
+        // Run it twice to handle overlapping matches
         normalized = normalized.replace(regex, `$1${value}$2`);
     }
     return normalized;
 }
 
 /**
- * Strips common marketing terms from the string.
+ * Strips common marketing terms and redundant punctuation from the string.
  * @param {string} name 
  * @returns {string}
  */
 function stripMarketingFluff(name) {
     let cleaned = name;
     MARKETING_FLUFF.forEach(term => {
-        const regex = new RegExp(term, 'g');
-        cleaned = cleaned.replace(regex, '');
+        // Use split/join for literal replacement to avoid regex escape issues
+        cleaned = cleaned.split(term).join('');
     });
     // Clean up multiple spaces and leading/trailing spaces
     return cleaned.replace(/\s\s+/g, ' ').trim();
