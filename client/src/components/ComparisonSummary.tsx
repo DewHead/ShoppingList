@@ -1,22 +1,40 @@
-import { Paper, Typography, Box, useTheme } from '@mui/material';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-import StoreIcon from '@mui/icons-material/Store';
-import { useTranslation } from '../useTranslation';
-import { cleanStoreName, getStoreLogo } from '../utils/comparisonUtils';
-
-interface ComparisonSummaryProps {
-  cheapestStore: {
-    name: string;
-    total: string;
-  } | null;
-  maxTotal: string | null;
-}
-
+import { Paper, Typography, Box, useTheme, Skeleton } from '@mui/material';
+...
 export default function ComparisonSummary({ cheapestStore, maxTotal }: ComparisonSummaryProps) {
   const { t } = useTranslation();
   const theme = useTheme();
 
-  if (!cheapestStore) return null;
+  if (!cheapestStore) {
+    return (
+      <Paper 
+        elevation={0} 
+        variant="outlined"
+        sx={{ 
+          p: 3, 
+          mb: 4, 
+          borderRadius: 4, 
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 3,
+          minHeight: 128
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Skeleton variant="rounded" width={80} height={80} />
+          <Box>
+            <Skeleton width={100} height={20} />
+            <Skeleton width={150} height={40} />
+          </Box>
+        </Box>
+        <Box sx={{ textAlign: { xs: 'center', sm: 'right' } }}>
+          <Skeleton width={120} height={60} />
+          <Skeleton width={80} height={20} />
+        </Box>
+      </Paper>
+    );
+  }
 
   const savings = maxTotal ? (parseFloat(maxTotal) - parseFloat(cheapestStore.total)).toFixed(2) : '0.00';
 

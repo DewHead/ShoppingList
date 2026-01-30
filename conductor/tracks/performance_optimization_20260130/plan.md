@@ -19,8 +19,8 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Backend & Scraper Efficiency' (Protocol in workflow.md)
 
 ## Phase 4: Final Verification & Stability
-- [~] Task: Cumulative Layout Shift (CLS) Audit
-- [ ] Task: Performance Benchmarking
+- [x] Task: Cumulative Layout Shift (CLS) Audit 6c2fd70
+- [~] Task: Performance Benchmarking
     - [ ] Run Lighthouse in a production-like build.
     - [ ] Document final performance metrics (TTI, Speed Index).
 - [ ] Task: Conductor - User Manual Verification 'Phase 4: Final Verification & Stability' (Protocol in workflow.md)

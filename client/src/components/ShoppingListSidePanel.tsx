@@ -9,7 +9,8 @@ import {
   ListItem, 
   ListItemText, 
   Collapse, 
-  Tooltip 
+  Tooltip,
+  Skeleton
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { ExpandMore, ExpandLess, PushPin, PushPinOutlined } from '@mui/icons-material';
@@ -184,7 +185,16 @@ export default function ShoppingListSidePanel({
                         <IconButton size="small" onClick={clearSelection}><DeleteIcon fontSize="small" /></IconButton>
                     </Box>
                 </Box>
-                {loadingMatches ? <Box sx={{ p: 2 }}><Typography variant="body2" color="text.secondary">Loading...</Typography></Box> : Object.keys(groupedMatchesByStore).length === 0 ? <Box sx={{ p: 2 }}><Typography variant="body2" color="text.secondary">No matches found.</Typography></Box> : (
+                {loadingMatches ? (
+                    <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {[1, 2, 3].map(i => (
+                            <Box key={i}>
+                                <Skeleton variant="rectangular" height={40} sx={{ mb: 1, borderRadius: 1 }} />
+                                <Skeleton variant="text" width="80%" />
+                            </Box>
+                        ))}
+                    </Box>
+                ) : Object.keys(groupedMatchesByStore).length === 0 ? <Box sx={{ p: 2 }}><Typography variant="body2" color="text.secondary">No matches found.</Typography></Box> : (
                     <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                         {Object.entries(groupedMatchesByStore).map(([storeName, itemsWithMatches]) => {
                             const isExpanded = expandedStores.includes(storeName);
