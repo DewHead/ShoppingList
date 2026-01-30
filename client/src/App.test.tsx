@@ -26,8 +26,8 @@ const mockContextValue = {
   background: 'monochrome',
   setBackground: vi.fn(),
   toggleColorMode: vi.fn(),
-  items: [],
-  refreshItems: vi.fn(),
+  showCreditCardPromos: false,
+  toggleCreditCardPromos: vi.fn(),
 };
 
 describe('App', () => {

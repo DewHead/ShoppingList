@@ -5,9 +5,6 @@ import {
   Toolbar, 
   Typography, 
   Box, 
-  BottomNavigation, 
-  BottomNavigationAction,
-  Paper,
   useMediaQuery,
   useTheme,
   IconButton,
@@ -15,8 +12,6 @@ import {
   Divider,
 } from '@mui/material';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import SettingsIcon from '@mui/icons-material/Settings';
-import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import TranslateIcon from '@mui/icons-material/Translate';

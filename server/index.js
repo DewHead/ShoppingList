@@ -115,33 +115,20 @@ const calculateBestPrice = (match, quantity) => {
 async function updateFtsIndex(storeId) {
     try {
         console.log(`Updating FTS index for store ${storeId}...`);
-        
-        const items = await db.all(`
-            SELECT remote_name, remote_id, supermarket_id, price, branch_info 
-            FROM supermarket_items 
-            WHERE supermarket_id = ?
-        `, [storeId]);
-        
-        if (items.length > 0) {
-            await db.run('BEGIN IMMEDIATE');
-            try {
-                await db.run('DELETE FROM items_fts WHERE supermarket_id = ?', [storeId]);
-                const insert = await db.prepare(`
-                    INSERT INTO items_fts (remote_name, remote_id, supermarket_id, price, branch_info)
-                    VALUES (?, ?, ?, ?, ?)
-                `);
-                for (const item of items) {
-                    await insert.run(item.remote_name, item.remote_id, item.supermarket_id, item.price, item.branch_info);
-                }
-                await insert.finalize();
-                await db.run('COMMIT');
-                console.log(`FTS index updated for store ${storeId} with ${items.length} items.`);
-            } catch (innerErr) {
-                await db.run('ROLLBACK');
-                throw innerErr;
-            }
-        } else {
-            console.log(`No items found for store ${storeId}, skipping FTS update.`);
+        await db.run('BEGIN IMMEDIATE');
+        try {
+            await db.run('DELETE FROM items_fts WHERE supermarket_id = ?', [storeId]);
+            await db.run(`
+                INSERT INTO items_fts (remote_name, remote_id, supermarket_id, price, branch_info)
+                SELECT remote_name, remote_id, supermarket_id, price, branch_info
+                FROM supermarket_items
+                WHERE supermarket_id = ?
+            `, [storeId]);
+            await db.run('COMMIT');
+            console.log(`FTS index updated for store ${storeId}.`);
+        } catch (innerErr) {
+            await db.run('ROLLBACK');
+            throw innerErr;
         }
     } catch (err) {
         console.error(`Error updating FTS index for store ${storeId}:`, err);
@@ -186,15 +173,26 @@ async function performSaveDiscoveryResults(storeId, products, promos) {
         if (validation.isValid) {
           const key = `${item.remote_id}_${item.branch_info}`;
           uniqueProducts.set(key, item);
-        } else {
-          console.warn(`Skipping invalid product: ${item.remote_name} (ID: ${item.remote_id}). Reason: ${validation.reason}`);
         }
       }
 
       await db.run('BEGIN IMMEDIATE');
       try {
         await db.run('DELETE FROM supermarket_items WHERE supermarket_id = ?', [storeId]);
+        
+        // 1. Bulk insert all unique item names into 'items' table
+        const productNames = Array.from(new Set([...uniqueProducts.values()].map(p => p.remote_name)));
         const insertItemStmt = await db.prepare('INSERT OR IGNORE INTO items (name) VALUES (?)');
+        for (const name of productNames) {
+            await insertItemStmt.run(name);
+        }
+        await insertItemStmt.finalize();
+
+        // 2. Map item names to IDs
+        const itemRows = await db.all('SELECT id, name FROM items');
+        const itemMap = new Map(itemRows.map(row => [row.name, row.id]));
+
+        // 3. Prepare bulk insert for supermarket_items
         const insertSupermarketItemStmt = await db.prepare(`
             INSERT INTO supermarket_items (
             supermarket_id, item_id, remote_id, remote_name, branch_info, 
@@ -204,25 +202,23 @@ async function performSaveDiscoveryResults(storeId, products, promos) {
         `);
 
         for (const item of uniqueProducts.values()) {
-            await insertItemStmt.run(item.remote_name);
-            const itemRow = await db.get('SELECT id FROM items WHERE name = ?', [item.remote_name]);
-            if (itemRow) {
-            await insertSupermarketItemStmt.run(
-                storeId,
-                itemRow.id,
-                item.remote_id,
-                item.remote_name,
-                item.branch_info,
-                item.price,
-                item.unit_of_measure,
-                item.unit_of_measure_price,
-                item.manufacturer,
-                item.country,
-                item.last_updated || new Date().toISOString()
-            );
+            const itemId = itemMap.get(item.remote_name);
+            if (itemId) {
+                await insertSupermarketItemStmt.run(
+                    storeId,
+                    itemId,
+                    item.remote_id,
+                    item.remote_name,
+                    item.branch_info,
+                    item.price,
+                    item.unit_of_measure,
+                    item.unit_of_measure_price,
+                    item.manufacturer,
+                    item.country,
+                    item.last_updated || new Date().toISOString()
+                );
             }
         }
-        await insertItemStmt.finalize();
         await insertSupermarketItemStmt.finalize();
         await db.run('COMMIT');
         await db.run('UPDATE supermarkets SET last_scrape_time = ? WHERE id = ?', [new Date().toISOString(), storeId]);

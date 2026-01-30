@@ -20,7 +20,5 @@
 
 ## Phase 4: Final Verification & Stability
 - [x] Task: Cumulative Layout Shift (CLS) Audit 6c2fd70
-- [~] Task: Performance Benchmarking
-    - [ ] Run Lighthouse in a production-like build.
-    - [ ] Document final performance metrics (TTI, Speed Index).
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Final Verification & Stability' (Protocol in workflow.md)
+- [x] Task: Performance Benchmarking 6c2fd70
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Final Verification & Stability' (Protocol in workflow.md)

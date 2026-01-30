@@ -4,12 +4,10 @@ import {
   Typography,
   Switch,
   Box,
-  List,
-  ListItem,
-  Paper,
-  useTheme,
-  IconButton,
-  Tooltip,
+    List, 
+    ListItem, 
+    useTheme, 
+    IconButton,  Tooltip,
   CircularProgress,
   Tabs,
   Tab,
@@ -105,7 +103,7 @@ const SettingsPage = () => {
     setScrapingStates(prev => ({ ...prev, [storeId]: 'Starting scrape...' }));
     try {
       await axios.post(`${API_BASE_URL}/api/scrape/${storeId}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error(`Error initiating scrape for store ${storeId}:`, err);
       setScrapingStates(prev => ({ ...prev, [storeId]: `Error: ${err.message}` }));
     }
@@ -238,9 +236,9 @@ const SettingsPage = () => {
                                     <IconButton
                                         onClick={() => handleScrapeStore(s.id)}
                                         color="primary"
-                                        disabled={!s.is_active || (!!scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' && !scrapingStates[s.id].startsWith('Error'))}
+                                        disabled={!s.is_active || (!!scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' && !scrapingStates[s.id]?.startsWith('Error'))}
                                     >
-                                        {(!!scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' && !scrapingStates[s.id].startsWith('Error')) ? <CircularProgress size={20} /> : <Play size={20} />}
+                                        {(!!scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' && !scrapingStates[s.id]?.startsWith('Error')) ? <CircularProgress size={20} /> : <Play size={20} />}
                                     </IconButton>
                                 </Box>
                             </Tooltip>
@@ -292,11 +290,11 @@ const SettingsPage = () => {
                                     <Typography variant="caption" color="text.secondary">{language === 'he' ? 'בחר את שפת הממשק המועדפת עליך' : 'Select your preferred interface language'}</Typography>
                                 </Box>
                             </Box>
-                            <Select
-                                value={language}
-                                onChange={(e) => toggleLanguage(e.target.value as string)}
-                                sx={{ minWidth: '120px' }}
-                            >
+                                <Select
+                                    value={language}
+                                    onChange={() => toggleLanguage()}
+                                    size="small"
+                                >
                                 <MenuItem value="he">עברית</MenuItem>
                                 <MenuItem value="en">English</MenuItem>
                             </Select>

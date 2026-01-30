@@ -1,15 +1,13 @@
-import React, { useEffect, useState, useCallback, useRef, useContext } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useContext, forwardRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../useTranslation';
 import { 
   useTheme, 
-  FormControl, 
   Box,
   Switch,
   FormControlLabel,
   Tooltip,
   Button,
-  CircularProgress,
   Typography,
   Menu,
   Checkbox,
@@ -17,11 +15,13 @@ import {
   Divider,
   Alert,
   TextField, 
-  InputAdornment 
+  InputAdornment,
+  Paper
 } from '@mui/material';
 import { ArrowLeft, AlertCircle, CreditCard, Settings, GripVertical, Search } from 'lucide-react';
 import { AppContext } from '../AppContext';
 import { cleanStoreName, getStoreLogo } from '../utils/comparisonUtils';
+import { TableVirtuoso } from 'react-virtuoso';
 
 interface SupermarketItem {
   id: number;
@@ -34,6 +34,7 @@ interface SupermarketItem {
   country: string | null;
   last_updated: string;
   promo_description: string | null;
+  branch_info?: string;
 }
 
 interface ColumnConfig {
@@ -57,8 +58,8 @@ export const ScrapedDataPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const [, setHasMore] = useState(true);
+  const [, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const [columns, setColumns] = useState<ColumnConfig[]>([
@@ -135,12 +136,6 @@ export const ScrapedDataPage: React.FC = () => {
     }
   };
 
-  const onDragLeave = (e: React.DragEvent) => {
-    const targetHeader = e.currentTarget as HTMLElement;
-    targetHeader.style.borderRight = '';
-    targetHeader.style.borderLeft = '';
-  };
-
   const onDrop = (e: React.DragEvent, targetKey: string) => {
     e.preventDefault();
     const targetHeader = e.currentTarget as HTMLElement;
@@ -157,10 +152,6 @@ export const ScrapedDataPage: React.FC = () => {
         result.splice(dropIdx, 0, removed);
         return result;
     });
-    setDraggedColKey(null);
-  };
-
-  const onDragEnd = () => {
     setDraggedColKey(null);
   };
 
@@ -268,7 +259,67 @@ export const ScrapedDataPage: React.FC = () => {
   };
 
   const visibleCols = columns.filter(c => c.visible);
-  const totalVisibleWidth = visibleCols.reduce((acc, col) => acc + col.width, 0);
+
+  const VirtuosoComponents = {
+    Scroller: forwardRef<HTMLDivElement, any>((props, ref) => (
+      <Box {...props} ref={ref} sx={{ bgcolor: 'background.paper', borderRadius: 2, overflow: 'hidden', boxShadow: 1 }} />
+    )),
+    Table: (props: any) => <table {...props} className={`${language === 'he' ? 'text-right' : 'text-left'} border-collapse`} style={{ tableLayout: 'fixed', width: '100%' }} />,
+    TableHead: forwardRef<HTMLTableSectionElement, any>((props, ref) => <thead {...props} ref={ref} className="bg-gray-100 dark:bg-gray-700 border-b dark:border-gray-600" />),
+    TableBody: forwardRef<HTMLTableSectionElement, any>((props, ref) => <tbody {...props} ref={ref} />),
+    TableRow: (props: any) => <tr {...props} className="hover:bg-gray-50 dark:hover:bg-gray-750" style={{ borderBottom: `1px solid ${theme.palette.divider}` }} />,
+  };
+
+  const FixedHeaderContent = () => (
+    <tr>
+      {visibleCols.map((col) => (
+        <th 
+          key={col.key} 
+          className="p-3 font-semibold relative select-none"
+          style={{ 
+              width: `${col.width}px`, 
+              backgroundColor: theme.palette.background.paper,
+              borderBottom: `1px solid ${theme.palette.divider}`
+          }}
+          onDragOver={(e) => isResizing ? undefined : onDragOver(e, col.key)}
+          onDrop={(e) => isResizing ? undefined : onDrop(e, col.key)}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 1, overflow: 'hidden' }}>
+              <Box 
+                  draggable 
+                  onDragStart={(e) => isResizing ? e.preventDefault() : onDragStart(e, col.key)}
+                  sx={{ cursor: 'grab', display: 'flex', alignItems: 'center', opacity: 0.4, '&:hover': { opacity: 1 } }}
+              >
+                  <GripVertical size={14} className="flex-shrink-0" />
+              </Box>
+              <span className="text-ellipsis overflow-hidden whitespace-nowrap">{col.label}</span>
+          </Box>
+          
+          <div 
+              onMouseDown={(e) => handleMouseDown(e, col.key, col.width)}
+              className={`absolute top-0 ${language === 'he' ? 'left-0' : 'right-0'} w-3 h-full cursor-col-resize `}
+              style={{ 
+                  zIndex: 100, 
+                  backgroundColor: 'transparent', 
+                  transition: 'background-color 0.1s ease-in-out'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.palette.primary.main + '30'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          />
+        </th>
+      ))}
+    </tr>
+  );
+
+  const RowContent = (_index: number, item: SupermarketItem) => (
+    <>
+      {visibleCols.map((col) => (
+        <td key={col.key} className="p-3 overflow-hidden text-ellipsis whitespace-nowrap text-center">
+            {renderCell(item, col.key)}
+        </td>
+      ))}
+    </>
+  );
 
   return (
     <div className={`min-h-screen p-4 ${theme.palette.mode === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`} dir={language === 'he' ? 'rtl' : 'ltr'}>
@@ -346,20 +397,18 @@ export const ScrapedDataPage: React.FC = () => {
 
         {error && <Alert severity="error" sx={{ mb: 4 }}>{t('error')}{error}</Alert>}
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
-          <div style={{ width: `${totalVisibleWidth}px` }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', mb: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', alignSelf: 'flex-end' }}>
                 <Button 
                     startIcon={<Settings size={18} />} 
                     variant="outlined" 
                     size="small"
                     onClick={(e) => setColumnAnchorEl(e.currentTarget)}
-                    sx={{ alignSelf: 'flex-end', mb: 1 }}
                 >
                     {t('columns')}
                 </Button>
                 <TextField
-                    sx={{ width: '100%' }}
+                    sx={{ width: 300 }}
                     size="small"
                     dir={language === 'he' ? 'rtl' : 'ltr'}
                     placeholder={t('searchPlaceholder') || 'Search...'}
@@ -373,95 +422,19 @@ export const ScrapedDataPage: React.FC = () => {
                         ),
                     }}
                 />
-              </Box>
+            </Box>
 
-              <Box sx={{
-                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(40, 40, 40, 0.7)' : 'rgba(103, 58, 183, 0.15)',
-                borderRadius: '8px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
-                mb: 6,
-                overflow: 'hidden'
-              }}>
-                <div className="overflow-x-auto">
-                  <table className={`${language === 'he' ? 'text-right' : 'text-left'} border-collapse`} style={{ tableLayout: 'fixed', width: '100%' }}>
-                      <thead>
-                      <tr className="bg-gray-100 dark:bg-gray-700 border-b dark:border-gray-600">
-                          {visibleCols.map((col) => (
-                          <th 
-                              key={col.key} 
-                              className="p-3 font-semibold relative select-none"
-                              style={{ 
-                                  width: `${col.width}px`, 
-                                  backgroundColor: 'transparent',
-                                  borderBottom: `1px solid ${theme.palette.divider}`
-                              }}
-                              onDragOver={(e) => isResizing ? undefined : onDragOver(e, col.key)}
-                              onDrop={(e) => isResizing ? undefined : onDrop(e, col.key)} // Pass event to onDrop
-                          >
-                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 1, overflow: 'hidden' }}>
-                                  <Box 
-                                      draggable 
-                                      onDragStart={(e) => isResizing ? e.preventDefault() : onDragStart(e, col.key)} // Pass event to onDragStart
-                                      sx={{ cursor: 'grab', display: 'flex', alignItems: 'center', opacity: 0.4, '&:hover': { opacity: 1 } }}
-                                  >
-                                      <GripVertical size={14} className="flex-shrink-0" />
-                                  </Box>
-                                  <span className="text-ellipsis overflow-hidden whitespace-nowrap">{col.label}</span>
-                              </Box>
-                              
-                              <div 
-                                  onMouseDown={(e) => handleMouseDown(e, col.key, col.width)}
-                                  className={`absolute top-0 ${language === 'he' ? 'left-0' : 'right-0'} w-3 h-full cursor-col-resize `}
-                                  style={{ 
-                                      zIndex: 100, 
-                                      backgroundColor: 'transparent', 
-                                      transition: 'background-color 0.1s ease-in-out'
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = theme.palette.primary.main + '30'}
-                                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                              />
-                          </th>
-                          ))}
-                      </tr>
-                      </thead>
-                      <tbody>
-                      {items.length === 0 && !loading ? (
-                          <tr>
-                          <td colSpan={visibleCols.length} className="p-4 text-center text-gray-500">{t('noDataFound')}</td>
-                          </tr>
-                      ) : (
-                          items.map((item, idx) => (
-                          <tr key={`${item.remote_id}-${item.branch_info}-${idx}`} style={{
-                            borderBottom: `1px solid ${theme.palette.divider}`,
-                            backgroundColor: 'transparent'
-                          }} className="hover:bg-gray-50 dark:hover:bg-gray-750">
-                              {visibleCols.map((col) => (
-                                 <td key={col.key} className="p-3 overflow-hidden text-ellipsis whitespace-nowrap text-center">
-                                     {renderCell(item, col.key)}
-                                 </td>
-                              ))}
-                          </tr>
-                          ))
-                      )}
-                      </tbody>
-                  </table>
-                </div>
-              </Box>
-          </div>
+            <Paper variant="outlined" sx={{ height: '70vh', width: '100%', overflow: 'hidden' }}>
+                <TableVirtuoso
+                    data={items}
+                    components={VirtuosoComponents}
+                    fixedHeaderContent={FixedHeaderContent}
+                    itemContent={RowContent}
+                    endReached={loadMore}
+                    increaseViewportBy={200}
+                />
+            </Paper>
         </Box>
-
-        {hasMore && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', pb: 4 }}>
-            <Button 
-                variant="outlined" 
-                onClick={loadMore} 
-                disabled={loading}
-                startIcon={loading ? <CircularProgress size={20} /> : null}
-            >
-              {loading ? (language === 'he' ? 'טוען...' : 'Loading...') : (language === 'he' ? 'טען עוד מוצרים' : 'Load More Products')}
-            </Button>
-          </Box>
-        )}
       </div>
     </div>
   );

@@ -1,5 +1,17 @@
 import { Paper, Typography, Box, useTheme, Skeleton } from '@mui/material';
-...
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import StoreIcon from '@mui/icons-material/Store';
+import { useTranslation } from '../useTranslation';
+import { cleanStoreName, getStoreLogo } from '../utils/comparisonUtils';
+
+interface ComparisonSummaryProps {
+  cheapestStore: {
+    name: string;
+    total: string;
+  } | null;
+  maxTotal: string | null;
+}
+
 export default function ComparisonSummary({ cheapestStore, maxTotal }: ComparisonSummaryProps) {
   const { t } = useTranslation();
   const theme = useTheme();
