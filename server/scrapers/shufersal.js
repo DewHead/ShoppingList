@@ -78,57 +78,73 @@ class ShufersalScraper extends BaseScraper {
               const products = root && root.Items ? root.Items.Item : []; 
               const productArray = Array.isArray(products) ? products : [products].filter(p => p);
 
-              for (const product of productArray) {
-                allDiscoveredProducts.push({
-                  supermarket_id: this.supermarket.id,
-                  item_id: null,
-                  remote_id: product.ItemCode,
-                  remote_name: fixSpacing(product.ItemName),
-                  branch_info: fileLink.branchName,
-                  price: parseFloat(product.ItemPrice),
-                  unit_of_measure: product.UnitOfMeasure || null,
-                  unit_of_measure_price: parseFloat(product.UnitOfMeasurePrice) || null,
-                  manufacturer: product.ManufacturerName || null,
-                  country: product.ManufactureCountry || null,
-                  last_updated: new Date().toISOString(),
-                });
+              this.emitStatus(`Processing ${productArray.length} items in chunks...`);
+              
+              const CHUNK_SIZE = 500;
+              for (let i = 0; i < productArray.length; i += CHUNK_SIZE) {
+                const chunk = productArray.slice(i, i + CHUNK_SIZE);
+                for (const product of chunk) {
+                  allDiscoveredProducts.push({
+                    supermarket_id: this.supermarket.id,
+                    item_id: null,
+                    remote_id: product.ItemCode,
+                    remote_name: fixSpacing(product.ItemName),
+                    branch_info: fileLink.branchName,
+                    price: parseFloat(product.ItemPrice),
+                    unit_of_measure: product.UnitOfMeasure || null,
+                    unit_of_measure_price: parseFloat(product.UnitOfMeasurePrice) || null,
+                    manufacturer: product.ManufacturerName || null,
+                    country: product.ManufactureCountry || null,
+                    last_updated: new Date().toISOString(),
+                  });
+                }
+                // Yield to event loop
+                await new Promise(resolve => setImmediate(resolve));
+                if (i % 2000 === 0) this.emitStatus(`Processed ${i} / ${productArray.length} items...`);
               }
-              this.emitStatus(`Processed ${productArray.length} items`);
+              this.emitStatus(`Finished processing ${productArray.length} items`);
           } else if (fileLink.type === 'PROMO_FULL') {
               const promos = root && root.Promotions ? root.Promotions.Promotion : [];
               const promoArray = Array.isArray(promos) ? promos : [promos].filter(p => p);
 
-              for (const promo of promoArray) {
-                  try {
-                      let promoItems = [];
-                      if (promo.PromotionItems && promo.PromotionItems.Item) {
-                          promoItems = Array.isArray(promo.PromotionItems.Item) ? promo.PromotionItems.Item : [promo.PromotionItems.Item];
-                      }
-                      
-                      if (promoItems.length > 0) {
-                          for (const pi of promoItems) {
-                            if (pi && pi.ItemCode) {
-                                allDiscoveredPromos.push({
-                                    supermarket_id: this.supermarket.id,
-                                    branch_info: fileLink.branchName,
-                                    remote_id: pi.ItemCode,
-                                    promo_id: promo.PromotionId,
-                                    description: formatPromo(promo.PromotionDescription),
-                                    last_updated: new Date().toISOString()
-                                });
-                            }
+              this.emitStatus(`Processing ${promoArray.length} promos in chunks...`);
+
+              const CHUNK_SIZE = 200;
+              for (let i = 0; i < promoArray.length; i += CHUNK_SIZE) {
+                  const chunk = promoArray.slice(i, i + CHUNK_SIZE);
+                  for (const promo of chunk) {
+                      try {
+                          let promoItems = [];
+                          if (promo.PromotionItems && promo.PromotionItems.Item) {
+                              promoItems = Array.isArray(promo.PromotionItems.Item) ? promo.PromotionItems.Item : [promo.PromotionItems.Item];
                           }
-                      } else if (promo.ItemCode) {
-                        allDiscoveredPromos.push({
-                            supermarket_id: this.supermarket.id,
-                            branch_info: fileLink.branchName,
-                            remote_id: promo.ItemCode,
-                            promo_id: promo.PromotionId,
-                            description: formatPromo(promo.PromotionDescription),
-                            last_updated: new Date().toISOString()
-                        });
-                      }
-                  } catch (e) {}
+                          
+                          if (promoItems.length > 0) {
+                              for (const pi of promoItems) {
+                                if (pi && pi.ItemCode) {
+                                    allDiscoveredPromos.push({
+                                        supermarket_id: this.supermarket.id,
+                                        branch_info: fileLink.branchName,
+                                        remote_id: pi.ItemCode,
+                                        promo_id: promo.PromotionId,
+                                        description: formatPromo(promo.PromotionDescription),
+                                        last_updated: new Date().toISOString()
+                                    });
+                                }
+                              }
+                          } else if (promo.ItemCode) {
+                            allDiscoveredPromos.push({
+                                supermarket_id: this.supermarket.id,
+                                branch_info: fileLink.branchName,
+                                remote_id: promo.ItemCode,
+                                promo_id: promo.PromotionId,
+                                description: formatPromo(promo.PromotionDescription),
+                                last_updated: new Date().toISOString()
+                            });
+                          }
+                      } catch (e) {}
+                  }
+                  await new Promise(resolve => setImmediate(resolve));
               }
               this.emitStatus(`Processed ${promoArray.length} promos`);
           }
