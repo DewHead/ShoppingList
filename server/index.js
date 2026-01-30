@@ -4,6 +4,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const { initDb } = require('./db');
 const { validateProduct } = require('./utils/validation');
+const { standardizeName } = require('./utils/nameStandardizer');
 
 const app = express();
 const server = http.createServer(app);
@@ -391,7 +392,22 @@ app.get('/api/supermarkets/:id/items', async (req, res) => {
     `;
     const dataParams = [showSbox, showClubPromos, ...countParams, `${search}%`, parseInt(limit), parseInt(offset)];
     const items = await db.all(dataQuery, dataParams);
-    res.json({ items, pagination: { total, page: parseInt(page), limit: parseInt(limit), totalPages: Math.ceil(total / limit) } });
+    
+    // Standardize product names before sending to frontend
+    const standardizedItems = items.map(item => ({
+      ...item,
+      remote_name: standardizeName(item.remote_name)
+    }));
+
+    res.json({ 
+      items: standardizedItems, 
+      pagination: { 
+        total, 
+        page: parseInt(page), 
+        limit: parseInt(limit), 
+        totalPages: Math.ceil(total / limit) 
+      } 
+    });
   } catch (err) {
     console.error('Error fetching items:', err.message);
     res.status(500).json({ error: err.message });
@@ -551,7 +567,14 @@ app.post('/api/search-all-products', async (req, res) => {
       GROUP BY items_fts.supermarket_id, items_fts.remote_id
       LIMIT 100
     `, [showSbox, showClubPromos, ftsQuery]);
-    res.json(results);
+
+    // Standardize product names
+    const standardizedResults = results.map(item => ({
+      ...item,
+      remote_name: standardizeName(item.remote_name)
+    }));
+
+    res.json(standardizedResults);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -583,7 +606,11 @@ app.get('/api/comparison', async (req, res) => {
                     WHERE si.supermarket_id = ? AND si.remote_id = ?
                     GROUP BY si.remote_id
                 `, [showCreditCardPromos, showClubPromos, storeId, pinned.remote_id]);
-                if (pinnedItem) return { ...pinnedItem, is_pinned: true };
+                if (pinnedItem) return { 
+                    ...pinnedItem, 
+                    remote_name: standardizeName(pinnedItem.remote_name),
+                    is_pinned: true 
+                };
             }
         } catch (e) { console.error("Pin check failed:", e); }
 
@@ -617,7 +644,11 @@ app.get('/api/comparison', async (req, res) => {
                 const { total } = calculateBestPrice(m, quantity);
                 if (total < lowestTotal) {
                     lowestTotal = total;
-                    bestCandidate = { ...m, is_pinned: false };
+                    bestCandidate = { 
+                        ...m, 
+                        remote_name: standardizeName(m.remote_name),
+                        is_pinned: false 
+                    };
                 }
             }
             return bestCandidate;
