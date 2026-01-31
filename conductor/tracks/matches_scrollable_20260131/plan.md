@@ -18,7 +18,7 @@ Adjust the maximum height dynamically based on the platform (Mobile vs. Desktop)
     - [ ] Verify that the card remains usable within the mobile drawer.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Responsive Refinement' (Protocol in workflow.md)
 
-## Phase 3: Verification & Cleanup
+## Phase 3: Verification & Cleanup [checkpoint: c8a64dd]
 Final check of the scrolling behavior and ensuring no regression on the "Cheapest Store" card.
 
 - [x] Task: Verify that the "Cheapest Store" card structure remains untouched and non-scrollable as per spec. [774bd69]
