@@ -9,7 +9,7 @@ Update the `ShoppingListSidePanel` component to support a scrollable container a
     - [ ] Ensure the "Matches for" `Paper` container has `display: 'flex'` and `flexDirection: 'column'` to correctly support the sticky header and scrollable body.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Infrastructure & Style Updates' (Protocol in workflow.md)
 
-## Phase 2: Responsive Refinement
+## Phase 2: Responsive Refinement [checkpoint: 7d9b33b]
 Adjust the maximum height dynamically based on the platform (Mobile vs. Desktop) to ensure optimal usability.
 
 - [x] Task: Refine `maxHeight` for the matches container in `ShoppingListSidePanel.tsx`. [ae481b5]
