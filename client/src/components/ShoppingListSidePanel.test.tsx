@@ -91,4 +91,32 @@ describe('ShoppingListSidePanel', () => {
       // maxHeight check might be tricky with responsive values, but we can check if property is set
     });
   });
+
+  it('verifies "Cheapest Store" card maintains its existing breakdown scrollable behavior', () => {
+    const cheapestStoreProps = {
+      ...mockProps,
+      selectedItemIds: [],
+      cheapestStore: {
+        name: 'Supermarket A',
+        total: '10.00',
+        results: [
+          { item: { itemName: 'Milk' }, name: 'Milk', price: '10.00' }
+        ],
+        missing: 0
+      }
+    };
+
+    renderWithContext(<ShoppingListSidePanel {...cheapestStoreProps} />);
+
+    // Check for Cheapest Store text to confirm it renders
+    expect(screen.getByText(/cheapest store/i)).toBeInTheDocument();
+
+    // The breakdown list is inside a Collapse, but in JSDOM we can find it.
+    // <List sx={{ p: 0, mt: 1, maxHeight: '50vh', overflowY: 'auto' }}>
+    const breakdownList = screen.getByRole('list', { hidden: true });
+    expect(breakdownList).toHaveStyle({
+      maxHeight: '50vh',
+      overflowY: 'auto'
+    });
+  });
 });
