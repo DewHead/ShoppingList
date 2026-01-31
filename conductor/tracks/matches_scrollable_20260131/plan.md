@@ -12,7 +12,7 @@ Update the `ShoppingListSidePanel` component to support a scrollable container a
 ## Phase 2: Responsive Refinement
 Adjust the maximum height dynamically based on the platform (Mobile vs. Desktop) to ensure optimal usability.
 
-- [ ] Task: Refine `maxHeight` for the matches container in `ShoppingListSidePanel.tsx`.
+- [x] Task: Refine `maxHeight` for the matches container in `ShoppingListSidePanel.tsx`. [ae481b5]
     - [ ] Use a responsive value for `maxHeight` (e.g., `70vh` or `calc(100vh - 300px)`).
     - [ ] Verify that the card fits within the desktop side panel without overlapping the global header.
     - [ ] Verify that the card remains usable within the mobile drawer.
