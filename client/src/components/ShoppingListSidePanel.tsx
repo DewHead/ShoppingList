@@ -175,8 +175,8 @@ export default function ShoppingListSidePanel({
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {selectedItemIds.length > 0 && (
-            <Paper variant="outlined" sx={{ p: 0, overflow: 'hidden', bgcolor: 'background.paper' }}>
-                <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Paper variant="outlined" sx={{ p: 0, overflow: 'hidden', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column' }}>
+                <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider', position: 'sticky', top: 0, zIndex: 1, bgcolor: 'background.paper' }}>
                     <Typography variant="h6" sx={{ fontSize: '1.1rem' }}>
                         {selectedItems.length === 1 ? `${t('matchesFor')} "${selectedItems[0].itemName}"` : `${t('matchesFor')} ${selectedItems.length} items`}
                     </Typography>
@@ -195,7 +195,7 @@ export default function ShoppingListSidePanel({
                         ))}
                     </Box>
                 ) : Object.keys(groupedMatchesByStore).length === 0 ? <Box sx={{ p: 2 }}><Typography variant="body2" color="text.secondary">No matches found.</Typography></Box> : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
                         {Object.entries(groupedMatchesByStore).map(([storeName, itemsWithMatches]) => {
                             const isExpanded = expandedStores.includes(storeName);
                             const storeLogo = getStoreLogo(storeName);
