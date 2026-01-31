@@ -1,6 +1,6 @@
 # Implementation Plan - Shopping List Matches Scrollable Card
 
-## Phase 1: Infrastructure & Style Updates
+## Phase 1: Infrastructure & Style Updates [checkpoint: f175c87]
 Update the `ShoppingListSidePanel` component to support a scrollable container and a sticky header for the matches section.
 
 - [x] Task: Modify `ShoppingListSidePanel.tsx` to wrap the matches list in a scrollable `Box`. [55f8f95]
