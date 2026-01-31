@@ -67,3 +67,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Performance Optimization 20260130**
 *Link: [./tracks/performance_optimization_20260130/](./tracks/performance_optimization_20260130/)*
+
+---
+
+- [x] **Track: in the shopping list page make the "matches for" card scrollable.**
+*Link: [./tracks/matches_scrollable_20260131/](./tracks/matches_scrollable_20260131/)*
