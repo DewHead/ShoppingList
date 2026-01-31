@@ -21,6 +21,6 @@ Adjust the maximum height dynamically based on the platform (Mobile vs. Desktop)
 ## Phase 3: Verification & Cleanup
 Final check of the scrolling behavior and ensuring no regression on the "Cheapest Store" card.
 
-- [ ] Task: Verify that the "Cheapest Store" card structure remains untouched and non-scrollable as per spec.
-- [ ] Task: Audit scrolling performance with `react-virtuoso` if the list grows excessively large (though likely not needed for standard match counts).
+- [x] Task: Verify that the "Cheapest Store" card structure remains untouched and non-scrollable as per spec. [774bd69]
+- [x] Task: Audit scrolling performance with `react-virtuoso` if the list grows excessively large (though likely not needed for standard match counts). [774bd69]
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Verification & Cleanup' (Protocol in workflow.md)
