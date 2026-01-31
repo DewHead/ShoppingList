@@ -88,7 +88,6 @@ async function performScrape(supermarket, items, io, onResults) {
 
     if (scraper) {
       io.emit('storeStatus', { storeId: supermarket.id, status: 'Initializing scraper...' });
-      const { products, promos } = await scraper.scrape(page);
       
       io.emit('storeStatus', { storeId: supermarket.id, status: 'Scraper started...' });
       const { products, promos } = await scraper.scrape(page);

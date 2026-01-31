@@ -165,16 +165,21 @@ async function saveDiscoveryResults(storeId, products, promos) {
 async function performSaveDiscoveryResults(storeId, products, promos) {
   try {
     if (products && products.length > 0) {
-      console.log(`Directly saving ${products.length} discovered items from store ${storeId}...`);
+      console.log(`[DB] Processing ${products.length} items from store ${storeId}...`);
       
       const uniqueProducts = new Map();
+      let validCount = 0;
       for (const item of products) {
         const validation = validateProduct(item);
         if (validation.isValid) {
           const key = `${item.remote_id}_${item.branch_info}`;
           uniqueProducts.set(key, item);
+          validCount++;
         }
+        // Yield every 5000 items to keep event loop alive
+        if (validCount % 5000 === 0) await new Promise(resolve => setImmediate(resolve));
       }
+      console.log(`[DB] Validated ${validCount} items. Saving to database...`);
 
       await db.run('BEGIN IMMEDIATE');
       try {
@@ -182,47 +187,67 @@ async function performSaveDiscoveryResults(storeId, products, promos) {
         
         // 1. Bulk insert all unique item names into 'items' table
         const productNames = Array.from(new Set([...uniqueProducts.values()].map(p => p.remote_name)));
-        const insertItemStmt = await db.prepare('INSERT OR IGNORE INTO items (name) VALUES (?)');
-        for (const name of productNames) {
-            await insertItemStmt.run(name);
+        
+        // Split names into chunks for bulk insert (SQLite limit)
+        const NAME_CHUNK_SIZE = 500;
+        for (let i = 0; i < productNames.length; i += NAME_CHUNK_SIZE) {
+            const chunk = productNames.slice(i, i + NAME_CHUNK_SIZE);
+            const placeholders = chunk.map(() => '(?)').join(',');
+            await db.run(`INSERT OR IGNORE INTO items (name) VALUES ${placeholders}`, chunk);
         }
-        await insertItemStmt.finalize();
 
         // 2. Map item names to IDs
         const itemRows = await db.all('SELECT id, name FROM items');
         const itemMap = new Map(itemRows.map(row => [row.name, row.id]));
 
-        // 3. Prepare bulk insert for supermarket_items
-        const insertSupermarketItemStmt = await db.prepare(`
-            INSERT INTO supermarket_items (
-            supermarket_id, item_id, remote_id, remote_name, branch_info, 
-            price, unit_of_measure, unit_of_measure_price, manufacturer, country, last_updated
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-
-        for (const item of uniqueProducts.values()) {
-            const itemId = itemMap.get(item.remote_name);
-            if (itemId) {
-                await insertSupermarketItemStmt.run(
-                    storeId,
-                    itemId,
-                    item.remote_id,
-                    item.remote_name,
-                    item.branch_info,
-                    item.price,
-                    item.unit_of_measure,
-                    item.unit_of_measure_price,
-                    item.manufacturer,
-                    item.country,
-                    item.last_updated || new Date().toISOString()
-                );
+        // 3. Bulk insert for supermarket_items
+        const ITEM_CHUNK_SIZE = 100; // SQLite variable limit is usually 999 or 32766, but keep it safe
+        const itemsToInsert = [...uniqueProducts.values()];
+        
+        for (let i = 0; i < itemsToInsert.length; i += ITEM_CHUNK_SIZE) {
+            const chunk = itemsToInsert.slice(i, i + ITEM_CHUNK_SIZE);
+            const placeholders = chunk.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',');
+            const values = [];
+            
+            for (const item of chunk) {
+                const itemId = itemMap.get(item.remote_name);
+                if (itemId) {
+                    values.push(
+                        storeId,
+                        itemId,
+                        item.remote_id,
+                        item.remote_name,
+                        item.branch_info,
+                        item.price,
+                        item.unit_of_measure,
+                        item.unit_of_measure_price,
+                        item.manufacturer,
+                        item.country,
+                        item.last_updated || new Date().toISOString()
+                    );
+                }
+            }
+            
+            if (values.length > 0) {
+                // Adjust placeholders if some items were skipped (e.g. name not found)
+                // Actually, logic ensures chunks map to values correctly, but let's be safe:
+                // We constructed values array based on valid IDs.
+                // The number of sets of placeholders must match values.length / 11.
+                const actualCount = values.length / 11;
+                const actualPlaceholders = Array(actualCount).fill('(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',');
+                
+                await db.run(`
+                    INSERT INTO supermarket_items (
+                    supermarket_id, item_id, remote_id, remote_name, branch_info, 
+                    price, unit_of_measure, unit_of_measure_price, manufacturer, country, last_updated
+                    ) VALUES ${actualPlaceholders}
+                `, values);
             }
         }
-        await insertSupermarketItemStmt.finalize();
+
         await db.run('COMMIT');
         await db.run('UPDATE supermarkets SET last_scrape_time = ? WHERE id = ?', [new Date().toISOString(), storeId]);
-        console.log(`Successfully saved ${uniqueProducts.size} items to supermarket_items for store ${storeId}.`);
+        console.log(`[DB] Successfully saved ${uniqueProducts.size} items for store ${storeId}.`);
       } catch (innerErr) {
           await db.run('ROLLBACK');
           throw innerErr;

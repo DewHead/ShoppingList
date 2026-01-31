@@ -10,6 +10,13 @@ The user wants to build a Shopping List application with integrated price scrapi
 ## Core Goals
 - **Real-time Price Comparison:** Provide up-to-date price data from various online grocery retailers (e.g., Shufersal, Tiv Taam) to enable informed purchasing decisions.
 - **Collaborative Experience:** Offer a seamless shopping list that synchronizes across devices and users in real-time.
+- **Extreme Performance:** Ensure a smooth, lag-free UI experience even with thousands of items, and minimize server overhead through intelligent scraping and caching.
+
+## Performance & Reliability
+- **Frontend Virtualization:** Use `react-virtuoso` to maintain 60 FPS scrolling on large lists and comparison matrices.
+- **Backend Efficiency:** Streaming XML processing and bulk database operations to handle large data imports (Shufersal) without blocking the event loop.
+- **Intelligent Caching:** Respect 1-hour TTL on scraper data to avoid redundant network traffic and browser overhead.
+- **Resource Management:** Global concurrency limits (3 parallel browsers) to ensure system stability on low-resource environments.
 
 ## Key Features
 - **Intelligent Web Scraping:** Robust scrapers for major grocery store websites (including Shufersal, Rami Levy, Tiv Taam, and more) to extract current pricing and product data.
