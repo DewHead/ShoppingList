@@ -31,7 +31,7 @@ class TivTaamScraper extends BaseScraper {
         const type = file.name.includes('Price') ? 'PRICE' : 'PROMO';
         try {
           this.emitStatus(`Downloading ${type} file for ${branchInfo}`);
-          const results = await this.levyBase.processFile(file.url, type, cookieHeader, branchInfo);
+          const results = await this.levyBase.processFile(file.url, type, cookieHeader, branchInfo, page);
           
           if (type === 'PRICE') {
             allDiscoveredProducts.push(...results);
@@ -44,7 +44,9 @@ class TivTaamScraper extends BaseScraper {
       }
 
       if (allDiscoveredProducts.length === 0 && allDiscoveredPromos.length === 0) {
-          throw new Error('Scrape failed: No products or promos found.');
+          this.log('No new files found. This is expected if files have not been uploaded yet today.');
+          this.emitStatus('No new files yet. Using existing data.');
+          return { products: [], promos: [] };
       }
 
       return { products: allDiscoveredProducts, promos: allDiscoveredPromos };

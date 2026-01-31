@@ -67,7 +67,7 @@ const SettingsPage = () => {
 
     socket.on('storeStatus', (data: { storeId: number, status: string }) => {
         setScrapingStates(prev => ({ ...prev, [data.storeId]: data.status }));
-        if (data.status === 'Done' || data.status.startsWith('Error')) {
+        if (data.status.startsWith('Done') || data.status.startsWith('Error')) {
             fetchSupermarkets();
         }
     });
@@ -208,17 +208,32 @@ const SettingsPage = () => {
                                     color="text.secondary" 
                                     sx={{ 
                                         opacity: s.is_active ? 0.7 : 0.4,
-                                        textAlign: { sm: 'right' }
+                                        textAlign: { sm: 'right' },
+                                        whiteSpace: 'pre-line'
                                     }}
                                 >
-                                    {scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' ? (
+                                    {scrapingStates[s.id] && scrapingStates[s.id] === 'Done (Skipped - Recently updated)' ? (
+                                        <>
+                                            {s.last_scrape_time ? t('lastScrape', { date: formatDistanceToNow(new Date(s.last_scrape_time), { addSuffix: true, locale: language === 'he' ? he : undefined }) }) : t('neverScraped')}
+                                            {'\n'}
+                                            {language === 'he' ? 'אין מה לרענן' : 'Nothing to refresh'}
+                                        </>
+                                    ) : (scrapingStates[s.id] && scrapingStates[s.id]?.includes('No new files') ? (
+                                        <>
+                                            {s.last_scrape_time ? t('lastScrape', { date: formatDistanceToNow(new Date(s.last_scrape_time), { addSuffix: true, locale: language === 'he' ? he : undefined }) }) : t('neverScraped')}
+                                            {'\n'}
+                                            <Typography component="span" color="warning.main" sx={{ fontWeight: 'bold' }}>
+                                                {language === 'he' ? 'אין קבצים חדשים. משתמש בנתונים קיימים.' : 'No new files. Using existing data.'}
+                                            </Typography>
+                                        </>
+                                    ) : (scrapingStates[s.id] && !scrapingStates[s.id]?.startsWith('Done') ? (
                                         <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
                                             {scrapingStates[s.id] === 'Starting scrape...' && <CircularProgress size={14} />}
                                             {scrapingStates[s.id]}
                                         </Box>
                                     ) : (
                                         s.last_scrape_time ? t('lastScrape', { date: formatDistanceToNow(new Date(s.last_scrape_time), { addSuffix: true, locale: language === 'he' ? he : undefined }) }) : t('neverScraped')
-                                    )}
+                                    )))}
                                 </Typography>
                             </Box>
                         </Box>
@@ -236,9 +251,9 @@ const SettingsPage = () => {
                                     <IconButton
                                         onClick={() => handleScrapeStore(s.id)}
                                         color="primary"
-                                        disabled={!s.is_active || (!!scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' && !scrapingStates[s.id]?.startsWith('Error'))}
+                                        disabled={!s.is_active || (!!scrapingStates[s.id] && !scrapingStates[s.id]?.startsWith('Done') && !scrapingStates[s.id]?.startsWith('Error'))}
                                     >
-                                        {(!!scrapingStates[s.id] && scrapingStates[s.id] !== 'Done' && !scrapingStates[s.id]?.startsWith('Error')) ? <CircularProgress size={20} /> : <Play size={20} />}
+                                        {(!!scrapingStates[s.id] && !scrapingStates[s.id]?.startsWith('Done') && !scrapingStates[s.id]?.startsWith('Error')) ? <CircularProgress size={20} /> : <Play size={20} />}
                                     </IconButton>
                                 </Box>
                             </Tooltip>

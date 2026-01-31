@@ -188,7 +188,9 @@ class CarrefourScraper extends BaseScraper {
       this.log(`Final Tally for Carrefour: ${allDiscoveredProducts.length} products, ${allDiscoveredPromos.length} unique items in promos.`);
 
       if (allDiscoveredProducts.length === 0 && allDiscoveredPromos.length === 0) {
-          throw new Error('Scrape failed: No products or promos found. See server logs.');
+          this.log('No new files found. This is expected if files have not been uploaded yet today.');
+          this.emitStatus('No new files yet. Using existing data.');
+          return { products: [], promos: [] };
       }
 
       return { products: allDiscoveredProducts, promos: allDiscoveredPromos };

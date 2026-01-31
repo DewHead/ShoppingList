@@ -66,7 +66,7 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
     if (!status) return null;
     
     const isError = status.startsWith('Error');
-    const isLoading = status !== 'Done' && !isError;
+    const isLoading = !status.startsWith('Done') && !isError;
     
     return { status, isError, isLoading };
   };

@@ -156,6 +156,7 @@ async function processDbQueue() {
 
 // Helper to save discovery results directly from server-side scraper
 async function saveDiscoveryResults(storeId, products, promos) {
+  console.log(`[DB-QUEUE] Queueing save for store ${storeId} (${products?.length || 0} products, ${promos?.length || 0} promos)`);
   return new Promise((resolve, reject) => {
     dbQueue.push({ storeId, products, promos, resolve, reject });
     processDbQueue();
@@ -181,32 +182,39 @@ async function performSaveDiscoveryResults(storeId, products, promos) {
       }
       console.log(`[DB] Validated ${validCount} items. Saving to database...`);
 
+      // 1. Ensure all items exist in 'items' table and get their IDs
+      const productNames = Array.from(new Set([...uniqueProducts.values()].map(p => p.remote_name)));
+      const itemMap = new Map();
+      const NAME_CHUNK_SIZE = 500;
+
+      for (let i = 0; i < productNames.length; i += NAME_CHUNK_SIZE) {
+          const chunk = productNames.slice(i, i + NAME_CHUNK_SIZE);
+          const validNames = chunk.filter(n => n && n.trim().length > 0);
+          
+          if (validNames.length > 0) {
+              const placeholders = validNames.map(() => '(?)').join(',');
+              await db.run(`INSERT OR IGNORE INTO items (name) VALUES ${placeholders}`, validNames);
+              
+              const fetchPlaceholders = validNames.map(() => '?').join(',');
+              const rows = await db.all(`SELECT id, name FROM items WHERE name IN (${fetchPlaceholders})`, validNames);
+              for (const row of rows) {
+                  itemMap.set(row.name, row.id);
+              }
+          }
+      }
+
+      const txStart = Date.now();
       await db.run('BEGIN IMMEDIATE');
+
       try {
         await db.run('DELETE FROM supermarket_items WHERE supermarket_id = ?', [storeId]);
         
-        // 1. Bulk insert all unique item names into 'items' table
-        const productNames = Array.from(new Set([...uniqueProducts.values()].map(p => p.remote_name)));
-        
-        // Split names into chunks for bulk insert (SQLite limit)
-        const NAME_CHUNK_SIZE = 500;
-        for (let i = 0; i < productNames.length; i += NAME_CHUNK_SIZE) {
-            const chunk = productNames.slice(i, i + NAME_CHUNK_SIZE);
-            const placeholders = chunk.map(() => '(?)').join(',');
-            await db.run(`INSERT OR IGNORE INTO items (name) VALUES ${placeholders}`, chunk);
-        }
-
-        // 2. Map item names to IDs
-        const itemRows = await db.all('SELECT id, name FROM items');
-        const itemMap = new Map(itemRows.map(row => [row.name, row.id]));
-
-        // 3. Bulk insert for supermarket_items
-        const ITEM_CHUNK_SIZE = 100; // SQLite variable limit is usually 999 or 32766, but keep it safe
+        // 2. Bulk insert for supermarket_items using the pre-fetched IDs
+        const ITEM_CHUNK_SIZE = 100; 
         const itemsToInsert = [...uniqueProducts.values()];
         
         for (let i = 0; i < itemsToInsert.length; i += ITEM_CHUNK_SIZE) {
             const chunk = itemsToInsert.slice(i, i + ITEM_CHUNK_SIZE);
-            const placeholders = chunk.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',');
             const values = [];
             
             for (const item of chunk) {
@@ -229,10 +237,6 @@ async function performSaveDiscoveryResults(storeId, products, promos) {
             }
             
             if (values.length > 0) {
-                // Adjust placeholders if some items were skipped (e.g. name not found)
-                // Actually, logic ensures chunks map to values correctly, but let's be safe:
-                // We constructed values array based on valid IDs.
-                // The number of sets of placeholders must match values.length / 11.
                 const actualCount = values.length / 11;
                 const actualPlaceholders = Array(actualCount).fill('(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',');
                 
@@ -246,6 +250,7 @@ async function performSaveDiscoveryResults(storeId, products, promos) {
         }
 
         await db.run('COMMIT');
+        console.log(`[DB] Successfully saved ${uniqueProducts.size} items for store ${storeId}.`);
         await db.run('UPDATE supermarkets SET last_scrape_time = ? WHERE id = ?', [new Date().toISOString(), storeId]);
         console.log(`[DB] Successfully saved ${uniqueProducts.size} items for store ${storeId}.`);
       } catch (innerErr) {
@@ -298,9 +303,6 @@ async function performSaveDiscoveryResults(storeId, products, promos) {
 // Socket connection
 io.on('connection', (socket) => {
   console.log('Client connected');
-  socket.on('results', async (data) => {
-     await saveDiscoveryResults(data.storeId, data.discoveryResults, data.promos);
-  });
 });
 
 // Supermarkets
@@ -770,22 +772,28 @@ app.post('/api/scrape/:id', async (req, res) => {
 });
 
 async function start() {
+  console.log('[START] Initializing database...');
   db = await initDb();
+  console.log('[START] Database initialized.');
   try {
     const ftsCount = await db.get('SELECT COUNT(*) as count FROM items_fts');
     if (ftsCount && ftsCount.count === 0) {
-      console.log("FTS index empty, populating...");
-      const items = await db.all('SELECT remote_name, remote_id, supermarket_id, price, branch_info FROM supermarket_items');
-      if (items.length > 0) {
-        await db.run('BEGIN TRANSACTION');
-        const insert = await db.prepare('INSERT INTO items_fts (remote_name, remote_id, supermarket_id, price, branch_info) VALUES (?, ?, ?, ?, ?)');
-        for (const item of items) await insert.run(item.remote_name, item.remote_id, item.supermarket_id, item.price, item.branch_info);
-        await insert.finalize();
+      console.log("[START] FTS index empty, populating from supermarket_items...");
+      await db.run('BEGIN TRANSACTION');
+      try {
+        await db.run(`
+            INSERT INTO items_fts (remote_name, remote_id, supermarket_id, price, branch_info)
+            SELECT remote_name, remote_id, supermarket_id, price, branch_info
+            FROM supermarket_items
+        `);
         await db.run('COMMIT');
-        console.log(`Population complete. Indexed ${items.length} items.`);
+        console.log(`[START] FTS Population complete.`);
+      } catch (e) {
+        await db.run('ROLLBACK');
+        console.error("[START] FTS Population failed:", e);
       }
     }
-  } catch (err) { console.error("Error during startup FTS check:", err); }
-  server.listen(port, () => console.log(`Server running at http://localhost:${port}`));
+  } catch (err) { console.error("[START] Error during startup FTS check:", err); }
+  server.listen(port, () => console.log(`[START] Server running at http://localhost:${port}`));
 }
 start();

@@ -8,6 +8,10 @@ async function initDb(filename = 'database.sqlite') {
     driver: sqlite3.Database
   });
 
+  // Optimize for concurrency
+  await db.exec('PRAGMA journal_mode = WAL;');
+  await db.configure('busyTimeout', 5000);
+
   // Auto-fix: Rebuild if tokenizer settings are missing '%' or single quote
   try {
       const ftsDef = await db.get("SELECT sql FROM sqlite_master WHERE name = 'items_fts'");
@@ -127,6 +131,14 @@ async function initDb(filename = 'database.sqlite') {
         await db.run('INSERT INTO supermarkets (name, url, branch_remote_id) VALUES (?, ?, ?)', 
             ['טיב טעם', 'https://url.publishedprices.co.il/login', '515']);
     }
+
+    // Cleanup legacy triggers and tables that cause performance issues
+    const triggers = ['supermarket_items_ai', 'supermarket_items_ad', 'supermarket_items_au'];
+    for (const trigger of triggers) {
+        await db.exec(`DROP TRIGGER IF EXISTS ${trigger}`);
+    }
+    await db.exec('DROP TABLE IF EXISTS products_fts');
+
   } catch (err) { console.error('Migration error:', err.message); }
 
   // Seed default supermarkets if empty

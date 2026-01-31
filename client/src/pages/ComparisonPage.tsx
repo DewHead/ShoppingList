@@ -104,7 +104,7 @@ const ComparisonPage = () => {
     const activeStoreIds = supermarkets.filter(s => s.is_active).map(s => s.id);
     return activeStoreIds.some(id => {
       const status = storeStatuses[id];
-      return status && status !== 'Done' && !status.startsWith('Error');
+      return status && !status.startsWith('Done') && !status.startsWith('Error');
     });
   }, [supermarkets, storeStatuses]);
 

@@ -83,7 +83,9 @@ class MahsaneyHashukScraper extends BaseScraper {
       this.log(`Mahsaney Hashuk: extracted ${allDiscoveredProducts.length} products, ${allDiscoveredPromos.length} promos.`);
 
       if (allDiscoveredProducts.length === 0 && allDiscoveredPromos.length === 0) {
-          throw new Error('Scrape failed: No products or promos found. See server logs.');
+          this.log('No new files found. This is expected if files have not been uploaded yet today.');
+          this.emitStatus('No new files yet. Using existing data.');
+          return { products: [], promos: [] };
       }
 
       return { products: allDiscoveredProducts, promos: allDiscoveredPromos };

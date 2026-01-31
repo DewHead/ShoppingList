@@ -41,7 +41,7 @@ function scrapeStore(supermarket, items, io, onResults) {
       const lastScrape = new Date(supermarket.last_scrape_time).getTime();
       if (Date.now() - lastScrape < SCRAPE_TTL) {
         console.log(`[Cache] Skipping scrape for ${supermarket.name} (last scrape was ${Math.round((Date.now() - lastScrape) / 60000)} mins ago)`);
-        io.emit('storeStatus', { storeId: supermarket.id, status: 'Done (Skipping - Recently updated)' });
+        io.emit('storeStatus', { storeId: supermarket.id, status: 'Done (Skipped - Recently updated)' });
         return resolve();
       }
     }
@@ -105,7 +105,11 @@ async function performScrape(supermarket, items, io, onResults) {
         promos: promos 
       });
       
-      io.emit('storeStatus', { storeId: supermarket.id, status: 'Done' });
+      if (products.length === 0 && promos.length === 0) {
+        io.emit('storeStatus', { storeId: supermarket.id, status: 'Done (No new files found)' });
+      } else {
+        io.emit('storeStatus', { storeId: supermarket.id, status: 'Done' });
+      }
     } else {
       throw new Error(`No scraper found for supermarket: ${supermarket.name}`);
     }
