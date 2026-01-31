@@ -195,7 +195,12 @@ export default function ShoppingListSidePanel({
                         ))}
                     </Box>
                 ) : Object.keys(groupedMatchesByStore).length === 0 ? <Box sx={{ p: 2 }}><Typography variant="body2" color="text.secondary">No matches found.</Typography></Box> : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+                    <Box sx={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        maxHeight: { xs: '65vh', md: 'calc(100vh - 250px)' }, 
+                        overflowY: 'auto' 
+                    }}>
                         {Object.entries(groupedMatchesByStore).map(([storeName, itemsWithMatches]) => {
                             const isExpanded = expandedStores.includes(storeName);
                             const storeLogo = getStoreLogo(storeName);
